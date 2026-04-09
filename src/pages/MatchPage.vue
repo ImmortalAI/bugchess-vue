@@ -9,6 +9,8 @@ import { ArrowLeftRight } from 'lucide-vue-next';
 import { ref } from 'vue';
 import type { Key, Piece } from '@lichess-org/chessground/types';
 import type { Config } from '@lichess-org/chessground/config';
+import PlayerPanel from '@/components/chess/PlayerPanel.vue';
+import ChessClock from '@/components/chess/ChessClock.vue';
 
 const isMobile = useBreakpoints(breakpointsTailwind).smaller('md');
 
@@ -96,7 +98,14 @@ const quickMessages = [
       pockets-orientation="horizontal"
       pockets-interactive
       @drop-new-piece="onDropNewPiece"
-    />
+    >
+      <template #pocket-top-extra>
+        <ChessClock :remaining-ms="180000" />
+      </template>
+      <template #pocket-bottom-extra>
+        <ChessClock :remaining-ms="180000" :active="true" />
+      </template>
+    </ChessBoard>
     <Button variant="outline" size="sm" @click="onSwitchBoard">
       <ArrowLeftRight />
     </Button>
@@ -104,16 +113,29 @@ const quickMessages = [
 
   <!-- Desktop layout -->
   <div v-else class="w-full h-full flex justify-center items-center gap-4">
-    <ChessBoard
-      class-board="w-(--cg-width) h-(--cg-height)"
-      :is-promoting="false"
-      pockets-orientation="vertical"
-      pockets-interactive
-      @drop-new-piece="onDropNewPiece"
-      resizable
-    />
-    <div class="flex flex-col gap-4">
+    <!-- Left panel: player info + main board -->
+    <div class="flex gap-2 items-center">
+      <div class="flex flex-col justify-between h-(--cg-height) py-1">
+        <PlayerPanel username="Opponent" :remaining-ms="180000" clock-position="bottom" />
+        <PlayerPanel username="ImmortalAI" :remaining-ms="180000" :clock-active="true" clock-position="top" />
+      </div>
+      <ChessBoard
+        class-board="w-(--cg-width) h-(--cg-height)"
+        :is-promoting="false"
+        pockets-orientation="vertical"
+        pockets-interactive
+        @drop-new-piece="onDropNewPiece"
+        resizable
+      />
+    </div>
+
+    <!-- Right panel: mate board + player info + chat -->
+    <div class="flex flex-col gap-2">
       <ChessBoard class-board="size-96" :is-promoting="false" pockets-orientation="vertical" />
+      <div class="flex gap-2 px-1">
+        <PlayerPanel username="Partner" :remaining-ms="180000" :clock-active="true" class="flex-1 min-w-0" />
+        <PlayerPanel username="Enemy" :remaining-ms="180000" clock-position="inline-start" class="flex-1 min-w-0" />
+      </div>
       <Chat
         class="h-80"
         :title="t('chat.title')"

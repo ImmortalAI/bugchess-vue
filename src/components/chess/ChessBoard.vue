@@ -59,49 +59,37 @@ const onPocketPieceMousedown = (
 };
 
 // TODO: replace with store data
-const testPockets: PocketData = { pawn: 1, knight: 1, bishop: 0, rook: 3, queen: 0 };
-const testPocketsOpponent: PocketData = { pawn: 2, knight: 0, bishop: 1, rook: 0, queen: 0 };
+const testPockets: PocketData = { pawn: 1, knight: 1, bishop: 1, rook: 3, queen: 1 };
+const testPocketsOpponent: PocketData = { pawn: 2, knight: 1, bishop: 1, rook: 1, queen: 1 };
 </script>
 
 <template>
   <!-- Vertical pockets: board on left, pockets column on right -->
-  <div
-    v-if="pocketsOrientation === 'vertical'"
-    :class="cn('relative grid grid-cols-[auto_auto] w-fit', props.class)"
-  >
+  <div v-if="pocketsOrientation === 'vertical'" :class="cn('relative grid grid-cols-[auto_auto] w-fit', props.class)">
     <div class="relative w-fit h-fit">
       <div :class="cn('relative', props.classBoard)" ref="board"></div>
       <ChessBoardResizer v-if="props.resizable && !props.isPromoting" />
       <ChessPromotion v-if="isPromoting" :class="props.classPromotion" color="white" file="b" />
     </div>
-    <ChessPockets
-      :class="props.classPockets"
-      color="white"
-      :data="testPockets"
-      :data-opponent="testPocketsOpponent"
-      :interactive="pocketsInteractive"
-      @piece-mousedown="onPocketPieceMousedown"
-    />
+    <ChessPockets :class="props.classPockets" color="white" :data="testPockets" :data-opponent="testPocketsOpponent"
+      :interactive="pocketsInteractive" @piece-mousedown="onPocketPieceMousedown" />
   </div>
 
   <!-- Horizontal pockets: opponent pocket / board / player pocket stacked vertically -->
-  <div
-    v-else-if="pocketsOrientation === 'horizontal'"
-    :class="cn('flex flex-col gap-1', props.class)"
-  >
-    <ChessPockets orientation="horizontal" color="black" :data="testPocketsOpponent" />
+  <div v-else-if="pocketsOrientation === 'horizontal'" :class="cn('flex flex-col gap-1', props.class)">
+    <div class="flex justify-between items-center gap-2">
+      <ChessPockets orientation="horizontal" color="black" :data="testPocketsOpponent" />
+      <slot name="pocket-top-extra" />
+    </div>
     <div :class="cn('relative w-full', props.classContainer)">
       <div :class="cn('relative', props.classBoard)" ref="board"></div>
       <ChessPromotion v-if="isPromoting" :class="props.classPromotion" color="white" file="b" />
     </div>
-    <ChessPockets
-      orientation="horizontal"
-      :class="props.classPockets"
-      color="white"
-      :data="testPockets"
-      :interactive="pocketsInteractive"
-      @piece-mousedown="onPocketPieceMousedown"
-    />
+    <div class="flex justify-between items-center gap-2">
+      <ChessPockets orientation="horizontal" :class="props.classPockets" color="white" :data="testPockets"
+        :interactive="pocketsInteractive" @piece-mousedown="onPocketPieceMousedown" />
+      <slot name="pocket-bottom-extra" />
+    </div>
   </div>
 
   <!-- No pockets -->
