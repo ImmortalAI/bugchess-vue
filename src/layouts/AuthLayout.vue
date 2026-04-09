@@ -9,34 +9,34 @@ const { t } = useTranslation();
 
 const formTranslate = computed(() => {
   if (route.path === '/signin') {
-    return 'translate-x-0';
+    return 'sm:translate-x-0';
   } else if (route.path === '/signup') {
-    return 'translate-x-[100%]';
+    return 'sm:translate-x-[100%]';
   }
-  return 'translate-x-0';
+  return 'sm:translate-x-0';
 });
 
 const infoTranslate = computed(() => {
   if (route.path === '/signin') {
-    return 'translate-x-0';
+    return 'sm:translate-x-0';
   } else if (route.path === '/signup') {
-    return '-translate-x-[100%]';
+    return 'sm:-translate-x-[100%]';
   }
-  return 'translate-x-0';
+  return 'sm:translate-x-0';
 });
 </script>
 
 <template>
-  <div class="w-full h-full relative">
+  <div class="w-full h-full flex items-center justify-center sm:relative sm:block">
     <div
-      class="flex flex-col w-[50%] h-full justify-center items-center absolute top-0 left-0 transition-transform"
+      class="sm:absolute sm:top-0 sm:left-0 sm:w-[50%] sm:h-full sm:flex sm:flex-col sm:justify-center sm:items-center sm:transition-transform"
       :class="formTranslate"
     >
       <RouterView />
     </div>
-    <Separator orientation="vertical" class="absolute top-0 left-1/2 h-full" />
+    <Separator orientation="vertical" class="hidden sm:block absolute top-0 left-1/2 h-full" />
     <div
-      class="flex flex-col w-[50%] h-full justify-center items-center absolute top-0 right-0 transition-transform"
+      class="hidden sm:flex flex-col w-[50%] h-full justify-center items-center absolute top-0 right-0 sm:transition-transform"
       :class="infoTranslate"
     >
       <h1 class="text-4xl font-bold mb-4">{{ t('authPage.infoTitle') }}</h1>
