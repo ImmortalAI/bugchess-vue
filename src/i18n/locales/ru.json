@@ -1,0 +1,39 @@
+{
+  "header": {
+    "loginBtn": "Вход"
+  },
+  "authPage": {
+    "infoTitle": "Добро пожаловать на Bugchess",
+    "infoDescription": "Пожалуйста, войдите в свой аккаунт или зарегистрируйтесь, если у вас его нет.",
+    "formLoginTitle": "Вход",
+    "formLoginDescription": "Пожалуйста, введите свои данные для входа в свой аккаунт.",
+    "formRegisterTitle": "Регистрация",
+    "formRegisterDescription": "Пожалуйста, введите свои данные для создания аккаунта.",
+    "formUsername": "Имя пользователя",
+    "formEmail": "Электронная почта",
+    "formPassword": "Пароль",
+    "formPasswordRepeat": "Повторите пароль",
+    "formLoginSubmit": "Войти",
+    "formRegisterSubmit": "Зарегистрироваться",
+    "errorAllFieldsRequired": "Все поля обязательные",
+    "errorLoginFailed": "Неудачный вход. Пожалуйста, попробуйте ещё раз.",
+    "errorPasswordMismatch": "Пароли не совпадают",
+    "errorRegisterFailed": "Неудачная регистрация. Пожалуйста, попробуйте ещё раз."
+  },
+  "chessTimeOptions": {
+    "bullet": "Пуля",
+    "blitz": "Блиц",
+    "rapid": "Рапид",
+    "classical": "Классика",
+    "yourGame": "Ваша игра"
+  },
+  "chessClockSlider": {
+    "textMinutes": "Минут на партию",
+    "textSeconds": "Добавление секунд на ход"
+  },
+  "chat": {
+    "title": "Чат",
+    "empty": "Нет сообщений",
+    "placeholder": "Введите сообщение..."
+  }
+}

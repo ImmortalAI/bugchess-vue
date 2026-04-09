@@ -1,0 +1,53 @@
+<script setup lang="ts">
+import { useTranslation } from '@/composables/useTranslation';
+import Slider from '../ui/slider/Slider.vue';
+import { computed } from 'vue';
+
+const { t } = useTranslation();
+
+const minutes = defineModel<number>('minutes', { required: true });
+const seconds = defineModel<number>('seconds', { required: true });
+
+const minutesArray = computed({
+  get() {
+    return [minutes.value];
+  },
+  set(val: number[]) {
+    minutes.value = val[0]!;
+  },
+});
+
+const secondsArray = computed({
+  get() {
+    return [seconds.value];
+  },
+  set(val: number[]) {
+    seconds.value = val[0]!;
+  },
+});
+</script>
+
+<template>
+  <div class="flex gap-1">
+    <div class="flex flex-col gap-2 w-xs">
+      <div class="flex justify-between">
+        <span>{{ t('chessClockSlider.textMinutes') }}</span
+        ><span
+          class="bg-stone-200 border border-stone-300 rounded-xs aspect-square text-[0.9rem] text-center"
+          >{{ minutes }}</span
+        >
+      </div>
+      <Slider v-model="minutesArray" :min="0" :max="180" :step="1" />
+    </div>
+    <span class="mb-auto align-top">+</span>
+    <div class="flex flex-col gap-2 w-xs">
+      <div class="flex justify-between">
+        <span
+          class="bg-stone-200 border border-stone-300 rounded-xs aspect-square text-[0.9rem] text-center"
+          >{{ seconds }}</span
+        ><span>{{ t('chessClockSlider.textSeconds') }}</span>
+      </div>
+      <Slider v-model="secondsArray" :min="0" :max="59" :step="1" />
+    </div>
+  </div>
+</template>

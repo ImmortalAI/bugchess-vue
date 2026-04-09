@@ -1,0 +1,39 @@
+{
+  "header": {
+    "loginBtn": "Login"
+  },
+  "authPage": {
+    "infoTitle": "Welcome to Bugchess",
+    "infoDescription": "Please sign in to your account or register if you don't have one.",
+    "formLoginTitle": "Login",
+    "formLoginDescription": "Please enter your credentials to log in to your account.",
+    "formRegisterTitle": "Register",
+    "formRegisterDescription": "Please enter your credentials to create an account.",
+    "formUsername": "Username",
+    "formEmail": "Email",
+    "formPassword": "Password",
+    "formPasswordRepeat": "Repeat password",
+    "formLoginSubmit": "Login",
+    "formRegisterSubmit": "Register",
+    "errorAllFieldsRequired": "All fields are required",
+    "errorLoginFailed": "Login failed. Please try again.",
+    "errorPasswordMismatch": "Passwords do not match",
+    "errorRegisterFailed": "Registration failed. Please try again."
+  },
+  "chessTimeOptions": {
+    "bullet": "Bullet",
+    "blitz": "Blitz",
+    "rapid": "Rapid",
+    "classical": "Classical",
+    "yourGame": "Your game"
+  },
+  "chessClockSlider": {
+    "textMinutes": "Minutes per game",
+    "textSeconds": "Increment per move"
+  },
+  "chat": {
+    "title": "Chat",
+    "empty": "No messages yet",
+    "placeholder": "Type a message..."
+  }
+}
