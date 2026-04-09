@@ -65,19 +65,17 @@ const cancelKick = () => {
     <!-- Kick confirmation overlay -->
     <Transition name="confirm">
       <div v-if="confirmingKick"
-        class="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-background/95 backdrop-blur-sm"
+        class="absolute inset-0 flex flex-col items-center justify-center gap-2 p-2 bg-background/95 backdrop-blur-sm"
         @click.stop>
-        <span class="text-sm font-semibold text-destructive text-center px-2">
+        <span class="text-xs font-semibold text-destructive text-center leading-tight">
           {{ t('lobby.kickConfirm') }}
         </span>
-        <div class="flex gap-2">
-          <Button size="sm" variant="destructive" @click="confirmKick">
-            {{ t('lobby.kickConfirmYes') }}
-          </Button>
-          <Button size="sm" variant="outline" @click="cancelKick">
-            {{ t('lobby.kickConfirmNo') }}
-          </Button>
-        </div>
+        <Button size="sm" variant="destructive" class="w-full" @click="confirmKick">
+          {{ t('lobby.kickConfirmYes') }}
+        </Button>
+        <Button size="sm" variant="ghost" class="w-full" @click="cancelKick">
+          {{ t('lobby.kickConfirmNo') }}
+        </Button>
       </div>
     </Transition>
   </div>

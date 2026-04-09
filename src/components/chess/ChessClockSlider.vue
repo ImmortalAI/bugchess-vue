@@ -28,8 +28,8 @@ const secondsArray = computed({
 </script>
 
 <template>
-  <div class="flex gap-1">
-    <div class="flex flex-col gap-2 w-xs">
+  <div class="flex flex-col sm:flex-row gap-2 sm:gap-1">
+    <div class="flex flex-col gap-2 w-full sm:w-xs">
       <div class="flex justify-between">
         <span>{{ t('chessClockSlider.textMinutes') }}</span
         ><span
@@ -39,13 +39,14 @@ const secondsArray = computed({
       </div>
       <Slider v-model="minutesArray" :min="0" :max="180" :step="1" />
     </div>
-    <span class="mb-auto align-top">+</span>
-    <div class="flex flex-col gap-2 w-xs">
+    <span class="hidden sm:block sm:mb-auto sm:align-top">+</span>
+    <div class="flex flex-col gap-2 w-full sm:w-xs">
       <div class="flex justify-between">
-        <span
+        <span>{{ t('chessClockSlider.textSeconds') }}</span
+        ><span
           class="bg-muted border border-border rounded-xs aspect-square text-[0.9rem] text-center"
           >{{ seconds }}</span
-        ><span>{{ t('chessClockSlider.textSeconds') }}</span>
+        >
       </div>
       <Slider v-model="secondsArray" :min="0" :max="59" :step="1" />
     </div>
