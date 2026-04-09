@@ -1,20 +1,11 @@
 <template>
-  <div class="flex w-full h-full items-center justify-center p-4">
-    <div class="relative w-full max-w-lg">
-      <img
-        src="@/assets/imgs/logo.png"
-        alt=""
-        aria-hidden="true"
-        class="absolute inset-0 w-full h-full object-contain opacity-20 pointer-events-none select-none rounded-2xl filter dark:invert-100"
-      />
-      <div class="relative grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
-        <TileButton
-          v-for="option in quickGameOptions"
-          :key="option.time"
-          :title="option.time"
-          :subtitle="t(option.name)"
-          @click="createLobby(option)"
-        />
+  <div class="relative w-full h-full">
+    <img src="@/assets/imgs/logo.png" alt="" aria-hidden="true"
+      class="absolute inset-0 w-full h-full object-contain opacity-20 pointer-events-none select-none filter dark:invert-100" />
+    <div class="relative w-full h-full flex items-start sm:items-center justify-center p-4 overflow-auto">
+      <div class="w-full max-w-lg grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
+        <TileButton v-for="option in quickGameOptions" :key="option.time" :title="option.time"
+          :subtitle="t(option.name)" @click="createLobby(option)" />
       </div>
     </div>
   </div>
