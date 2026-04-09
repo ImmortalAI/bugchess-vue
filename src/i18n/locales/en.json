@@ -31,6 +31,16 @@
     "textMinutes": "Minutes per game",
     "textSeconds": "Increment per move"
   },
+  "lobby": {
+    "invitePlayer": "Invite...",
+    "kickConfirm": "Remove player?",
+    "kickConfirmYes": "Remove",
+    "kickConfirmNo": "Cancel",
+    "myTeam": "My team",
+    "enemyTeam": "Enemy team",
+    "rating": "Rating",
+    "startGame": "Start Matchmaking"
+  },
   "chat": {
     "title": "Chat",
     "empty": "No messages yet",

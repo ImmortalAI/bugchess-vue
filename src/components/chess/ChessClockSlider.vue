@@ -33,7 +33,7 @@ const secondsArray = computed({
       <div class="flex justify-between">
         <span>{{ t('chessClockSlider.textMinutes') }}</span
         ><span
-          class="bg-stone-200 border border-stone-300 rounded-xs aspect-square text-[0.9rem] text-center"
+          class="bg-muted border border-border rounded-xs aspect-square text-[0.9rem] text-center"
           >{{ minutes }}</span
         >
       </div>
@@ -43,7 +43,7 @@ const secondsArray = computed({
     <div class="flex flex-col gap-2 w-xs">
       <div class="flex justify-between">
         <span
-          class="bg-stone-200 border border-stone-300 rounded-xs aspect-square text-[0.9rem] text-center"
+          class="bg-muted border border-border rounded-xs aspect-square text-[0.9rem] text-center"
           >{{ seconds }}</span
         ><span>{{ t('chessClockSlider.textSeconds') }}</span>
       </div>

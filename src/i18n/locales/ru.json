@@ -31,6 +31,16 @@
     "textMinutes": "Минут на партию",
     "textSeconds": "Добавление секунд на ход"
   },
+  "lobby": {
+    "invitePlayer": "Пригласить...",
+    "kickConfirm": "Исключить игрока?",
+    "kickConfirmYes": "Исключить",
+    "kickConfirmNo": "Отмена",
+    "myTeam": "Моя команда",
+    "enemyTeam": "Команда противника",
+    "rating": "Рейтинговая игра",
+    "startGame": "Начать поиск игры"
+  },
   "chat": {
     "title": "Чат",
     "empty": "Нет сообщений",
