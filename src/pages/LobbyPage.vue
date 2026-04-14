@@ -40,7 +40,7 @@
 
 <script setup lang="ts">
 import ChessClockSlider from '@/components/chess/ChessClockSlider.vue';
-import LobbyPlayer from '@/components/lobby/LobbyPlayer.vue';
+import LobbyPlayer from '@/components/common/Lobby/LobbyPlayer.vue';
 import Button from '@/components/ui/button/Button.vue';
 import Label from '@/components/ui/label/Label.vue';
 import Switch from '@/components/ui/switch/Switch.vue';
