@@ -41,7 +41,9 @@ const avatarSrc = computed(() => {
       <!-- clock-left layout: [clock] [name] [avatar] -->
       <template v-if="clockPosition === 'inline-start'">
         <ChessClock :remaining-ms="props.remainingMs" :active="props.clockActive" />
-        <span class="text-sm font-medium truncate flex-1 min-w-0 text-right">{{ props.username }}</span>
+        <span class="text-sm font-medium truncate flex-1 min-w-0 text-right">{{
+          props.username
+        }}</span>
         <Avatar class="size-8 shrink-0">
           <AvatarImage :src="avatarSrc" :alt="props.username" />
           <AvatarFallback>{{ props.username[0]?.toUpperCase() }}</AvatarFallback>

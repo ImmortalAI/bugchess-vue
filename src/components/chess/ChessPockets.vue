@@ -31,7 +31,10 @@ const isHorizontal = computed(() => props.orientation === 'horizontal');
   <div
     v-if="isHorizontal"
     :class="
-      cn('flex flex-row w-fit h-14 rounded-md border border-border bg-pocket p-1 gap-1', props.class)
+      cn(
+        'flex flex-row w-fit h-14 rounded-md border border-border bg-pocket p-1 gap-1',
+        props.class,
+      )
     "
   >
     <template v-for="p in pieces" :key="p">

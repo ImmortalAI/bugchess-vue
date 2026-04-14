@@ -117,7 +117,12 @@ const quickMessages = [
     <div class="flex gap-2 items-center">
       <div class="flex flex-col justify-between h-(--cg-height) py-1">
         <PlayerPanel username="Opponent" :remaining-ms="180000" clock-position="bottom" />
-        <PlayerPanel username="ImmortalAI" :remaining-ms="180000" :clock-active="true" clock-position="top" />
+        <PlayerPanel
+          username="ImmortalAI"
+          :remaining-ms="180000"
+          :clock-active="true"
+          clock-position="top"
+        />
       </div>
       <ChessBoard
         class-board="w-(--cg-width) h-(--cg-height)"
@@ -133,8 +138,18 @@ const quickMessages = [
     <div class="flex flex-col gap-2">
       <ChessBoard class-board="size-96" :is-promoting="false" pockets-orientation="vertical" />
       <div class="flex gap-2 px-1">
-        <PlayerPanel username="Partner" :remaining-ms="180000" :clock-active="true" class="flex-1 min-w-0" />
-        <PlayerPanel username="Enemy" :remaining-ms="180000" clock-position="inline-start" class="flex-1 min-w-0" />
+        <PlayerPanel
+          username="Partner"
+          :remaining-ms="180000"
+          :clock-active="true"
+          class="flex-1 min-w-0"
+        />
+        <PlayerPanel
+          username="Enemy"
+          :remaining-ms="180000"
+          clock-position="inline-start"
+          class="flex-1 min-w-0"
+        />
       </div>
       <Chat
         class="h-80"
