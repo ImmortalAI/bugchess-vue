@@ -1,6 +1,9 @@
 {
   "header": {
-    "loginBtn": "Login"
+    "loginBtn": "Login",
+    "guest": "Guest",
+    "themeLight": "Light theme",
+    "themeDark": "Dark theme"
   },
   "authPage": {
     "infoTitle": "Welcome to Bugchess",
@@ -40,6 +43,11 @@
     "enemyTeam": "Enemy team",
     "rating": "Rating",
     "startGame": "Start Matchmaking"
+  },
+  "serverUnavailable": {
+    "title": "Server Unavailable",
+    "description": "Failed to connect to the server after several attempts. Check your connection and try again.",
+    "retryBtn": "Try again"
   },
   "chat": {
     "title": "Chat",

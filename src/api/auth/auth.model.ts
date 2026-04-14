@@ -1,9 +1,11 @@
-export type AuthFormData = {
-  username: string;
+export type AuthLoginData = {
+  email: string;
   password: string;
 };
 
-export type UserData = {
-  id: string;
+export type AuthRegisterData = {
   username: string;
+  email: string;
+  password: string;
+  repeat_password: string;
 };

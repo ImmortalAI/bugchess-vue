@@ -1,15 +1,6 @@
-export type ApiBaseSuccessResponse<T> = {
-  success: true;
-  data: T;
-};
+export type I18nResponse = string;
 
-export type ApiBaseErrorResponse = {
-  success: false;
-  error: string;
-};
-
-export type ApiBaseResponse<T> = ApiBaseSuccessResponse<T> | ApiBaseErrorResponse;
-
-export type ApiMessageResponse = {
+export type ActionResult = {
+  isOk: boolean;
   message: string;
 };

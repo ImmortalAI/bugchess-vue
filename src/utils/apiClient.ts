@@ -29,7 +29,7 @@ apiClient.interceptors.response.use(
         return apiClient(originalRequest);
       } catch (refreshErr) {
         const auth = useAuthStore();
-        if (auth.isAuthenticated) auth.user = null;
+        auth.user = null;
 
         // Redirect to login page if refresh fails and show a toast message
         router.push({ name: 'login' });

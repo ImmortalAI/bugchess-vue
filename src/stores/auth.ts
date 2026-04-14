@@ -1,16 +1,8 @@
-import type { AuthFormData, UserData } from '@/api/auth/auth.model';
-import {
-  authLogin,
-  authLogout,
-  authLogoutAll,
-  authRegister,
-  userMe,
-} from '@/api/auth/auth.service';
-import type {
-  ApiBaseErrorResponse,
-  ApiBaseSuccessResponse,
-  ApiMessageResponse,
-} from '@/api/base/base.model';
+import type { AuthLoginData, AuthRegisterData } from '@/api/auth/auth.model';
+import { authLogin, authLogout, authLogoutAll, authRegister } from '@/api/auth/auth.service';
+import type { ActionResult } from '@/api/base/base.model';
+import type { UserData } from '@/api/users/users.model';
+import { usersMe } from '@/api/users/users.service';
 import { isAxiosError } from 'axios';
 import { defineStore } from 'pinia';
 import { computed, ref } from 'vue';
@@ -20,100 +12,69 @@ export const useAuthStore = defineStore('auth', () => {
 
   const isAuthenticated = computed(() => user.value !== null);
 
-  const refresh = async (): Promise<null | string> => {
+  const refresh = async (): Promise<ActionResult> => {
     try {
-      const userReturned = await userMe();
-      if (!userReturned.success) return userReturned.error;
-
-      user.value = userReturned.data;
-      return null;
+      user.value = await usersMe();
+      return { isOk: true, message: '' };
     } catch {
       if (user.value) {
         user.value = null;
-        return 'Session expired, please log in again';
+        return { isOk: false, message: 'Session expired, please log in again' };
       }
-      return 'User not logged in';
+      return { isOk: false, message: 'User not logged in' };
     }
   };
 
-  const register = async (formData: AuthFormData): Promise<{ isOk: boolean; message: string }> => {
+  const register = async (formData: AuthRegisterData): Promise<ActionResult> => {
     try {
-      const result = await authRegister(formData);
-
-      return {
-        isOk: true,
-        message:
-          (result as ApiBaseSuccessResponse<UserData>).data.username + ' registered successfully',
-      };
-    } catch (e) {
-      if (isAxiosError(e))
-        return {
-          isOk: true,
-          message:
-            (e.response?.data as ApiBaseErrorResponse | undefined)?.error ?? 'Error logging in',
-        };
-
-      return { isOk: true, message: 'Unable to log in: unknown error' };
-    }
-  };
-
-  const login = async (loginData: AuthFormData): Promise<{ isOk: boolean; message: string }> => {
-    try {
-      const result = await authLogin(loginData);
+      const message = await authRegister(formData);
       await refresh();
-      return {
-        isOk: true,
-        message:
-          (result as ApiBaseSuccessResponse<UserData>).data.username + ' logged in successfully',
-      };
+      return { isOk: true, message };
     } catch (e) {
       if (isAxiosError(e))
-        return {
-          isOk: true,
-          message:
-            (e.response?.data as ApiBaseErrorResponse | undefined)?.error ?? 'Error logging in',
-        };
-
-      return { isOk: true, message: 'Unable to log in: unknown error' };
+        return { isOk: false, message: (e.response?.data as string) ?? 'Error registering' };
+      return { isOk: false, message: 'Unable to register: unknown error' };
     }
   };
 
-  const logout = async () => {
+  const login = async (loginData: AuthLoginData): Promise<ActionResult> => {
     try {
-      const result = await authLogout();
-      user.value = null;
-
-      return (result as ApiBaseSuccessResponse<ApiMessageResponse>).data.message;
+      const message = await authLogin(loginData);
+      await refresh();
+      return { isOk: true, message };
     } catch (e) {
       if (isAxiosError(e))
-        return {
-          isOk: true,
-          message:
-            (e.response?.data as ApiBaseErrorResponse | undefined)?.error ?? 'Error logging out',
-        };
-
-      return { isOk: true, message: 'Unable to log out: unknown error' };
+        return { isOk: false, message: (e.response?.data as string) ?? 'Error logging in' };
+      return { isOk: false, message: 'Unable to log in: unknown error' };
     }
   };
 
-  const logoutAll = async () => {
+  const logout = async (): Promise<ActionResult> => {
     try {
-      const result = await authLogoutAll();
+      const message = await authLogout();
       user.value = null;
-
-      return (result as ApiBaseSuccessResponse<ApiMessageResponse>).data.message;
+      return { isOk: true, message };
     } catch (e) {
       if (isAxiosError(e))
-        return {
-          isOk: true,
-          message:
-            (e.response?.data as ApiBaseErrorResponse | undefined)?.error ??
-            'Error logging out all sessions',
-        };
-
-      return { isOk: true, message: 'Unable to log out all sessions: unknown error' };
+        return { isOk: false, message: (e.response?.data as string) ?? 'Error logging out' };
+      return { isOk: false, message: 'Unable to log out: unknown error' };
     }
   };
 
-  return { user, isAuthenticated, register, login, logout, logoutAll, refresh };
+  const logoutAll = async (): Promise<ActionResult> => {
+    try {
+      const message = await authLogoutAll();
+      user.value = null;
+      return { isOk: true, message };
+    } catch (e) {
+      if (isAxiosError(e))
+        return {
+          isOk: false,
+          message: (e.response?.data as string) ?? 'Error logging out all sessions',
+        };
+      return { isOk: false, message: 'Unable to log out all sessions: unknown error' };
+    }
+  };
+
+  return { user, isAuthenticated, refresh, register, login, logout, logoutAll };
 });

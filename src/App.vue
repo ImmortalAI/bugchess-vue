@@ -2,12 +2,15 @@
 import { Toaster } from 'vue-sonner';
 import HeaderComponent from './components/common/HeaderComponent.vue';
 import { useTranslation } from './composables/useTranslation';
+import { useAuthStore } from './stores/auth';
 import { onMounted } from 'vue';
 
 const { restoreLanguage } = useTranslation();
+const auth = useAuthStore();
 
 onMounted(() => {
   restoreLanguage();
+  auth.refresh();
 });
 </script>
 

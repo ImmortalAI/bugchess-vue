@@ -20,19 +20,19 @@ const router = useRouter();
 const auth = useAuthStore();
 const { t } = useTranslation();
 
-const username = ref('');
+const email = ref('');
 const password = ref('');
 
 const errorMsg = ref('');
 
 const handleSubmit = async () => {
-  if (!username.value || !password.value) {
+  if (!email.value || !password.value) {
     // Handle empty fields error
     errorMsg.value = t('authPage.errorAllFieldsRequired');
     return;
   }
 
-  const res = await auth.login({ username: username.value, password: password.value });
+  const res = await auth.login({ email: email.value, password: password.value });
   if (res.isOk) {
     router.push('/');
   } else {
@@ -51,14 +51,14 @@ const handleSubmit = async () => {
       <form @submit.prevent="handleSubmit">
         <div class="flex flex-col gap-4">
           <div class="flex flex-col gap-2">
-            <Label for="username">{{ t('authPage.formUsername') }}</Label>
+            <Label for="email">{{ t('authPage.formEmail') }}</Label>
             <Input
-              id="username"
-              type="text"
-              :placeholder="t('authPage.formUsername')"
-              autocomplete="username"
+              id="email"
+              type="email"
+              :placeholder="t('authPage.formEmail')"
+              autocomplete="email"
               class="w-full"
-              v-model.trim="username"
+              v-model.trim="email"
             />
           </div>
           <div class="flex flex-col gap-2">
