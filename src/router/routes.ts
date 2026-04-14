@@ -34,4 +34,9 @@ export const routes: RouteRecordRaw[] = [
     path: '/match',
     component: () => import('@/pages/MatchPage.vue'),
   },
+  {
+    name: 'ServerUnavailable',
+    path: '/server-unavailable',
+    component: () => import('@/pages/ServerUnavailablePage.vue'),
+  },
 ];

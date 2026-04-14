@@ -50,6 +50,8 @@ apiClient.interceptors.response.use(
         await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY));
         return apiClient(originalRequest);
       }
+
+      router.push({ name: 'ServerUnavailable' });
     }
 
     return Promise.reject(error);
