@@ -8,7 +8,7 @@ const { t } = useTranslation();
 
 const reloadPage = () => {
   window.location.reload();
-}
+};
 </script>
 
 <template>
