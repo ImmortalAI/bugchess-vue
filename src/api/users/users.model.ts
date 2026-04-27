@@ -5,3 +5,9 @@ export type UserData = {
   rating: number;
   sigma: number;
 };
+
+export type UserSearchResult = {
+  id: string;
+  username: string;
+  rating: number;
+};

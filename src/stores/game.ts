@@ -3,23 +3,33 @@ import { chessIdxToSqr, isFLLine } from '@/utils/chessOpsGroundUtils';
 import type { Config } from '@lichess-org/chessground/config';
 import type { Key, MoveMetadata } from '@lichess-org/chessground/types';
 import { makeFen, parseFen } from 'chessops/fen';
+import { Material } from 'chessops/setup';
+import { makeUci, parseUci } from 'chessops/util';
 import type { NormalMove, Role, Square } from 'chessops/types';
 import { parseSquare } from 'chessops/util';
 import { Crazyhouse } from 'chessops/variant';
 import { defineStore } from 'pinia';
 import { ref, shallowRef } from 'vue';
-import type { WsDropData, WsMateMoveData, WsMoveData } from '@/api/websocket/websocket.model';
+import {
+  WsMsgType,
+  type WsMateMoveData,
+  type WsMoveUciData,
+} from '@/api/websocket/websocket.model';
 import { useWebSocketStore } from './ws';
-import type { BughouseConfig } from '@/api/chess/chess.model';
+import type { BughouseConfig, PocketData } from '@/api/chess/chess.model';
 
 export const useGameStore = defineStore('game', () => {
-  const api = ref<Crazyhouse | null>(null);
+  const api = shallowRef<Crazyhouse | null>(null);
 
   const mainBoardState = shallowRef<Config | undefined>(undefined);
   const mateBoardState = shallowRef<Config | undefined>(undefined);
 
   const isPromoting = ref(false);
   const promotionMoveCache = ref<{ from: Square; to: Square } | null>(null);
+
+  // Pockets of both players on the mate (partner's) board.
+  // partner = pieces the partner can drop; opponent = pieces the partner's opponent can drop.
+  const matePockets = shallowRef<{ partner: PocketData; opponent: PocketData } | null>(null);
 
   const ws = useWebSocketStore();
 
@@ -29,9 +39,11 @@ export const useGameStore = defineStore('game', () => {
     const dests = chessIdxToSqr(api.value.allDests());
     const check = api.value.isCheck();
     const turnColor = api.value.turn;
+    const currentSetup = api.value.toSetup();
 
     mainBoardState.value = {
-      fen: makeFen(api.value.toSetup()),
+      ...mainBoardState.value,
+      fen: makeFen(currentSetup),
       turnColor,
       movable: {
         color: turnColor,
@@ -42,6 +54,27 @@ export const useGameStore = defineStore('game', () => {
     };
   };
 
+  // In Bughouse, captured pieces go to the partner's board, not the capturer's pocket.
+  // Restore pockets after every normal move to prevent chessops from incorrectly
+  // crediting this board's pockets.
+  const playNormal = (move: NormalMove) => {
+    const pocketsBefore = api.value!.pockets!.clone();
+    api.value!.play(move);
+    api.value!.pockets = pocketsBefore;
+  };
+
+  // Returns the role of the piece captured by `move`, or null if no capture.
+  // Must be called before play() while the board still reflects the pre-move state.
+  const detectCapture = (move: NormalMove): Exclude<Role, 'king'> | null => {
+    if (!api.value) return null;
+    const piece = api.value.board.get(move.to);
+    // Standard capture: destination square is occupied.
+    if (piece) return (piece.promoted ? 'pawn' : piece.role) as Exclude<Role, 'king'>;
+    // En passant: pawn moves to the ep square which is empty.
+    if (move.to === api.value.epSquare) return 'pawn';
+    return null;
+  };
+
   const promote = (promotion: NormalMove['promotion']) => {
     if (!api.value) return;
 
@@ -50,17 +83,13 @@ export const useGameStore = defineStore('game', () => {
     }
 
     const { from, to } = promotionMoveCache.value;
+    const uci = makeUci({ from, to, promotion });
 
-    ws.sendMessage({
-      type: 'move',
-      data: {
-        from: chessIdxToSqr(from),
-        to: chessIdxToSqr(to),
-        promotion,
-      },
-    });
+    ws.sendMessage({ type: WsMsgType.GAME_MOVE, data: uci });
 
-    api.value.play({ from, to, promotion });
+    const capturedRole = detectCapture({ from, to, promotion });
+    if (capturedRole && matePockets.value) matePockets.value.partner[capturedRole]++;
+    playNormal({ from, to, promotion });
     updateBoardState([chessIdxToSqr(from), chessIdxToSqr(to)]);
 
     promotionMoveCache.value = null;
@@ -84,9 +113,12 @@ export const useGameStore = defineStore('game', () => {
       return;
     }
 
-    ws.sendMessage({ type: 'move', data: { from: orig, to: dest } });
+    const uci = makeUci({ from, to });
+    ws.sendMessage({ type: WsMsgType.GAME_MOVE, data: uci });
 
-    api.value.play({ from, to });
+    const capturedRole = detectCapture({ from, to });
+    if (capturedRole && matePockets.value) matePockets.value.partner[capturedRole]++;
+    playNormal({ from, to });
     updateBoardState([orig, dest]);
   };
 
@@ -98,44 +130,51 @@ export const useGameStore = defineStore('game', () => {
       throw new ChessError('Invalid drop target: ' + to);
     }
 
-    ws.sendMessage({ type: 'drop', data: { role, to } });
+    ws.sendMessage({ type: WsMsgType.GAME_MOVE, data: makeUci({ role, to: toSq }) });
 
     api.value.play({ role, to: toSq });
     updateBoardState([to]);
   };
 
-  const moveOpponent = (data: WsMoveData) => {
+  const moveOpponent = (uci: WsMoveUciData) => {
     if (!api.value) return;
 
-    const from = parseSquare(data.from),
-      to = parseSquare(data.to);
-    if (from === undefined || to === undefined) {
-      throw new ChessError('Invalid opponent move keys: ' + data.from + ' -> ' + data.to);
+    const parsed = parseUci(uci);
+    if (!parsed) {
+      throw new ChessError('Invalid opponent move UCI: ' + uci);
     }
 
-    api.value.play({ from, to, promotion: data.promotion });
-    updateBoardState([data.from, data.to]);
-  };
-
-  const dropOpponent = (data: WsDropData) => {
-    if (!api.value) return;
-
-    const toSq = parseSquare(data.to);
-    if (toSq === undefined) {
-      throw new ChessError('Invalid opponent drop target: ' + data.to);
+    if ('from' in parsed) {
+      // Normal move: captures must not go to this board's pockets in Bughouse.
+      // The captured piece goes to the partner's opponent's pocket on the mate board.
+      const capturedRole = detectCapture(parsed);
+      if (capturedRole && matePockets.value) matePockets.value.opponent[capturedRole]++;
+      playNormal(parsed);
+      updateBoardState([chessIdxToSqr(parsed.from), chessIdxToSqr(parsed.to)]);
+    } else {
+      // Drop: chessops correctly decrements the opponent's pocket (initialized from cfg.p.opponent)
+      api.value.play(parsed);
+      updateBoardState([chessIdxToSqr(parsed.to)]);
     }
-
-    api.value.play({ role: data.role, to: toSq });
-    updateBoardState([data.to]);
   };
 
   const mateMove = (data: WsMateMoveData) => {
     if (!mateBoardState.value) return;
 
     mateBoardState.value = {
+      ...mateBoardState.value,
       fen: data.fen,
-      lastMove: data.lastMove,
+      lastMove: data.lm,
     };
+
+    if (data.pd && api.value?.pockets) {
+      api.value.pockets[data.pd.c][data.pd.r]++;
+      updateBoardState();
+    }
+
+    if (data.mpd && matePockets.value) {
+      matePockets.value[data.mpd.s][data.mpd.r]--;
+    }
   };
 
   const setup = (cfg: BughouseConfig) => {
@@ -144,7 +183,19 @@ export const useGameStore = defineStore('game', () => {
       throw new ChessError('Invalid FEN: ' + cfg.fen);
     }
 
-    api.value = Crazyhouse.fromSetup(parsedFen.value).unwrap();
+    const fenSetup = parsedFen.value;
+    // Inject the player's pocket from server config — pockets in Bughouse are
+    // managed cross-board and are not encoded in the position FEN.
+    const pockets = Material.empty();
+    const opponentColor = cfg.orn === 'white' ? 'black' : 'white';
+    Object.assign(pockets[cfg.orn], cfg.p.my);
+    Object.assign(pockets[opponentColor], cfg.p.opponent);
+    fenSetup.pockets = pockets;
+
+    api.value = Crazyhouse.fromSetup(fenSetup).unwrap();
+
+    const emptyPocket = (): PocketData => ({ pawn: 0, knight: 0, bishop: 0, rook: 0, queen: 0 });
+    matePockets.value = { partner: { ...cfg.p.mate }, opponent: emptyPocket() };
 
     const dests = chessIdxToSqr(api.value.allDests());
     const check = api.value.isCheck();
@@ -152,7 +203,7 @@ export const useGameStore = defineStore('game', () => {
 
     mainBoardState.value = {
       fen: cfg.fen,
-      orientation: cfg.orientation,
+      orientation: cfg.orn,
       turnColor,
       movable: {
         color: turnColor,
@@ -167,13 +218,9 @@ export const useGameStore = defineStore('game', () => {
 
     mateBoardState.value = {
       fen: cfg.mateFen,
-      orientation: cfg.orientation === 'white' ? 'black' : 'white',
+      orientation: cfg.orn === 'white' ? 'black' : 'white',
       viewOnly: true,
     };
-  };
-
-  const sync = (cfg: BughouseConfig) => {
-    setup(cfg);
   };
 
   return {
@@ -181,13 +228,12 @@ export const useGameStore = defineStore('game', () => {
     isPromoting,
     mainBoardState,
     mateBoardState,
+    matePockets,
     setup,
-    sync,
     promote,
     move,
     drop,
     moveOpponent,
-    dropOpponent,
     mateMove,
   };
 });

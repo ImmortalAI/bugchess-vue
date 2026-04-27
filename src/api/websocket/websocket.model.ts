@@ -1,32 +1,312 @@
 import type { Key } from '@lichess-org/chessground/types';
-import type { NormalMove, Role } from 'chessops/types';
+import type { Color, Role } from 'chessops/types';
 import type { BughouseConfig } from '../chess/chess.model';
 
-export type WsMoveData = {
-  from: Key;
-  to: Key;
-  promotion?: NormalMove['promotion'];
+/** Numeric message type IDs — kept in sync with server. */
+export const WsMsgType = {
+  // BASE CLIENT
+  PING: 0,
+
+  // BASE SERVER
+  PONG: 20,
+
+  // LOBBY CLIENT
+  LOBBY_CREATE: 40,
+  LOBBY_LEAVE: 41,
+  LOBBY_KICK: 42,
+  INVITE_SEND: 43,
+  INVITE_ACCEPT: 44,
+  INVITE_REJECT: 45,
+  // Combined time control + rated mode (was LOBBY_TIME; LOBBY_RATING merged in)
+  LOBBY_CONFIG: 46,
+  START_MM: 48,
+  CANCEL_MM: 49,
+
+  // LOBBY SERVER
+  LOBBY_JOIN: 60,
+  LOBBY_KICKED: 61,
+  INVITE_RECEIVE: 62,
+  // Combined time + rated update (was LOBBY_TIME_UPDATE; LOBBY_RATING_UPDATE merged in)
+  LOBBY_CONFIG_UPDATE: 63,
+  LOBBY_START_MM: 65,
+  LOBBY_CANCEL_MM: 66,
+
+  // GAME CLIENT
+  // UCI notation covers both regular moves ("e2e4") and drops ("P@e4")
+  GAME_MOVE: 80,
+  GAME_REQ_SYNC: 82,
+  GAME_CHAT_MSG_SEND: 83,
+
+  // GAME SERVER
+  GAME_JOIN: 100,
+  GAME_SYNC: 101,
+  // UCI; covers opponent drops too (was separate GAME_OPPONENT_DROP)
+  GAME_OPPONENT_MOVE: 102,
+  GAME_MATE_BOARD_UPDATE: 104,
+  GAME_CHAT_MSG_RECEIVE: 105,
+
+  // ETC
+  ERROR: 999,
+} as const;
+
+// ─── Payload types ────────────────────────────────────────────────────────────
+
+/** UCI-encoded move string.
+ *  Regular move: `"e2e4"` — Drop: `"P@e4"` */
+export type WsMoveUciData = string;
+
+/** Pocket change caused by a capture on the main board.
+ *  The captured piece is transferred to the partner's pocket on that color. */
+export type WsPocketDiff = {
+  /** role — piece type that was captured */
+  r: Role;
+  /** color — side whose pocket receives the piece */
+  c: Color;
 };
 
-export type WsDropData = {
-  role: Role;
-  to: Key;
+/** Pocket change on the mate (partner's) board caused by a drop there. */
+export type WsMatePocketDiff = {
+  /** role — piece type that was dropped */
+  r: Exclude<Role, 'king'>;
+  /** side — whose pocket loses the piece:
+   *  `"partner"` = partner's own pocket, `"opponent"` = partner's opponent's pocket */
+  s: 'partner' | 'opponent';
 };
 
+/** State update for the mate (partner's) board after a move or drop there. */
 export type WsMateMoveData = {
+  /** fen — position after the move */
   fen: string;
-  lastMove?: [Key, Key];
+  /** lm — last move as [from, to] squares */
+  lm?: [Key, Key];
+  /** pd — pocket diff: piece added to the main board from a capture on the mate board */
+  pd?: WsPocketDiff;
+  /** mpd — mate pocket diff: piece removed from the mate board after a drop */
+  mpd?: WsMatePocketDiff;
 };
 
-export type WsMoveMsg = { type: 'move'; data: WsMoveData };
-export type WsDropMsg = { type: 'drop'; data: WsDropData };
-export type WsSyncMsg = { type: 'sync'; data: BughouseConfig };
-export type WsMateMoveMsg = { type: 'mate_move'; data: WsMateMoveData };
-export type WsPingMsg = { type: 'ping'; data: Record<string, never> };
-export type WsPongMsg = { type: 'pong'; data: Record<string, never> };
+/** Time control settings used in lobby configuration. */
+export type WsLobbyTimeData = {
+  /** m — minutes per side */
+  m: number;
+  /** s — increment in seconds per move */
+  s: number;
+};
 
-export type WsIncomingData = WsMoveMsg | WsDropMsg | WsSyncMsg | WsMateMoveMsg | WsPingMsg;
+/** Combined lobby configuration: time control and rated-game flag.
+ *  Used for both LOBBY_CONFIG (client→server) and LOBBY_CONFIG_UPDATE (server→client). */
+export type WsLobbyConfigData = {
+  /** t — time control */
+  t: WsLobbyTimeData;
+  /** r — rated game enabled */
+  r: boolean;
+};
 
-export type WsOutgoingData = WsMoveMsg | WsDropMsg | WsPongMsg;
+/** Reference to a user by ID, used for invite and kick actions. */
+export type WsUserIdData = {
+  /** uid — target user's ID */
+  uid: string;
+};
 
+/** A single chat message payload. */
+export type WsChatData = {
+  /** m — message text */
+  m: string;
+};
+
+/** A player occupying one of the four lobby seats. */
+export type WsSeatData = {
+  /** uid — user ID */
+  uid: string;
+  /** n — display name */
+  n: string;
+  /** r — current rating */
+  r: number;
+};
+
+/** Full lobby state snapshot sent by the server.
+ *  Seats are ordered: `[teamA_slot0, teamA_slot1, teamB_slot0, teamB_slot1]`, `null` = empty. */
+export type WsLobbyStateData = {
+  /** id — lobby ID */
+  id: string;
+  /** oid — owner's user ID */
+  oid: string;
+  /** s — four seats */
+  s: (WsSeatData | null)[];
+  /** t — current time control */
+  t: WsLobbyTimeData;
+  /** r — rated game enabled */
+  r: boolean;
+  /** q — matchmaking queue is active */
+  q: boolean;
+  /** p — connected user's seat index (null = spectating) */
+  p: number | null;
+};
+
+// ─── Message types ────────────────────────────────────────────────────────────
+
+// BASE CLIENT
+
+/** CLIENT→SERVER: Keep-alive ping. Server responds with PONG (20). */
+export type WsPingMsg = { type: (typeof WsMsgType)['PING']; data: Record<string, never> };
+
+// BASE SERVER
+
+/** SERVER→CLIENT: Keep-alive response to PING (0). */
+export type WsPongMsg = { type: (typeof WsMsgType)['PONG']; data: Record<string, never> };
+
+// LOBBY CLIENT
+
+/** CLIENT→SERVER: Create a new lobby with the given initial time control. */
+export type WsCreateLobbyMsg = { type: (typeof WsMsgType)['LOBBY_CREATE']; data: WsLobbyTimeData };
+
+/** CLIENT→SERVER: Leave the current lobby. */
+export type WsLeaveLobbyMsg = {
+  type: (typeof WsMsgType)['LOBBY_LEAVE'];
+  data: Record<string, never>;
+};
+
+/** CLIENT→SERVER: Kick a player from the lobby (owner only). */
+export type WsKickLobbyMsg = { type: (typeof WsMsgType)['LOBBY_KICK']; data: WsUserIdData };
+
+/** CLIENT→SERVER: Send a game invite to another player. */
+export type WsInviteSendMsg = { type: (typeof WsMsgType)['INVITE_SEND']; data: WsUserIdData };
+
+/** CLIENT→SERVER: Accept a pending game invite. */
+export type WsInviteAcceptMsg = {
+  type: (typeof WsMsgType)['INVITE_ACCEPT'];
+  data: Record<string, never>;
+};
+
+/** CLIENT→SERVER: Reject a pending game invite. */
+export type WsInviteRejectMsg = {
+  type: (typeof WsMsgType)['INVITE_REJECT'];
+  data: Record<string, never>;
+};
+
+/** CLIENT→SERVER: Update the lobby's time control and rated-game setting. */
+export type WsLobbyConfigMsg = {
+  type: (typeof WsMsgType)['LOBBY_CONFIG'];
+  data: WsLobbyConfigData;
+};
+
+/** CLIENT→SERVER: Start matchmaking from the current lobby. */
+export type WsStartMMMsg = { type: (typeof WsMsgType)['START_MM']; data: Record<string, never> };
+
+/** CLIENT→SERVER: Cancel an ongoing matchmaking search. */
+export type WsCancelMMMsg = { type: (typeof WsMsgType)['CANCEL_MM']; data: Record<string, never> };
+
+// LOBBY SERVER
+
+/** SERVER→CLIENT: Full lobby state snapshot sent on join or any state change. */
+export type WsLobbyJoinMsg = { type: (typeof WsMsgType)['LOBBY_JOIN']; data: WsLobbyStateData };
+
+/** SERVER→CLIENT: The client was kicked from the lobby. */
+export type WsLobbyKickedMsg = {
+  type: (typeof WsMsgType)['LOBBY_KICKED'];
+  data: Record<string, never>;
+};
+
+/** SERVER→CLIENT: Another player sent the client a game invite. */
+export type WsInviteReceiveMsg = {
+  type: (typeof WsMsgType)['INVITE_RECEIVE'];
+  data: WsUserIdData;
+};
+
+/** SERVER→CLIENT: Lobby time control or rated setting was changed. */
+export type WsLobbyConfigUpdateMsg = {
+  type: (typeof WsMsgType)['LOBBY_CONFIG_UPDATE'];
+  data: WsLobbyConfigData;
+};
+
+/** SERVER→CLIENT: Matchmaking search has started. */
+export type WsLobbyStartMMMsg = {
+  type: (typeof WsMsgType)['LOBBY_START_MM'];
+  data: Record<string, never>;
+};
+
+/** SERVER→CLIENT: Matchmaking search was cancelled. */
+export type WsLobbyCancelMMMsg = {
+  type: (typeof WsMsgType)['LOBBY_CANCEL_MM'];
+  data: Record<string, never>;
+};
+
+// GAME CLIENT
+
+/** CLIENT→SERVER: Make a move or drop a piece (UCI notation).
+ *  Regular move: `"e2e4"` — Drop: `"P@e4"` */
+export type WsGameMoveMsg = { type: (typeof WsMsgType)['GAME_MOVE']; data: WsMoveUciData };
+
+/** CLIENT→SERVER: Request a full game state resync. */
+export type WsGameReqSyncMsg = {
+  type: (typeof WsMsgType)['GAME_REQ_SYNC'];
+  data: Record<string, never>;
+};
+
+/** CLIENT→SERVER: Send a chat message in the game room. */
+export type WsGameChatSendMsg = {
+  type: (typeof WsMsgType)['GAME_CHAT_MSG_SEND'];
+  data: WsChatData;
+};
+
+// GAME SERVER
+
+/** SERVER→CLIENT: Initial game state on join. */
+export type WsGameJoinMsg = { type: (typeof WsMsgType)['GAME_JOIN']; data: BughouseConfig };
+
+/** SERVER→CLIENT: Full game state resync (response to GAME_REQ_SYNC). */
+export type WsGameSyncMsg = { type: (typeof WsMsgType)['GAME_SYNC']; data: BughouseConfig };
+
+/** SERVER→CLIENT: Opponent made a move or drop on the main board (UCI). */
+export type WsGameOpponentMoveMsg = {
+  type: (typeof WsMsgType)['GAME_OPPONENT_MOVE'];
+  data: WsMoveUciData;
+};
+
+/** SERVER→CLIENT: A move or drop occurred on the mate (partner's) board. */
+export type WsGameMateBoardUpdateMsg = {
+  type: (typeof WsMsgType)['GAME_MATE_BOARD_UPDATE'];
+  data: WsMateMoveData;
+};
+
+/** SERVER→CLIENT: A chat message was received in the game room. */
+export type WsGameChatReceiveMsg = {
+  type: (typeof WsMsgType)['GAME_CHAT_MSG_RECEIVE'];
+  data: WsChatData;
+};
+
+// ─── Union types ──────────────────────────────────────────────────────────────
+
+/** All message types the client can receive from the server. */
+export type WsIncomingData =
+  | WsPingMsg
+  | WsLobbyJoinMsg
+  | WsLobbyKickedMsg
+  | WsInviteReceiveMsg
+  | WsLobbyConfigUpdateMsg
+  | WsLobbyStartMMMsg
+  | WsLobbyCancelMMMsg
+  | WsGameJoinMsg
+  | WsGameSyncMsg
+  | WsGameOpponentMoveMsg
+  | WsGameMateBoardUpdateMsg
+  | WsGameChatReceiveMsg;
+
+/** All message types the client can send to the server. */
+export type WsOutgoingData =
+  | WsPongMsg
+  | WsCreateLobbyMsg
+  | WsLeaveLobbyMsg
+  | WsKickLobbyMsg
+  | WsInviteSendMsg
+  | WsInviteAcceptMsg
+  | WsInviteRejectMsg
+  | WsLobbyConfigMsg
+  | WsStartMMMsg
+  | WsCancelMMMsg
+  | WsGameMoveMsg
+  | WsGameReqSyncMsg
+  | WsGameChatSendMsg;
+
+/** Any WebSocket message (incoming or outgoing). */
 export type WsData = WsIncomingData | WsOutgoingData;
