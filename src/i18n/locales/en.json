@@ -23,6 +23,12 @@
     "errorPasswordMismatch": "Passwords do not match",
     "errorRegisterFailed": "Registration failed. Please try again."
   },
+  "home": {
+    "inLobby": "You already have an active lobby",
+    "inGame": "You already have an active game",
+    "returnToLobby": "Return to lobby",
+    "returnToGame": "Return to game"
+  },
   "chessTimeOptions": {
     "bullet": "Bullet",
     "blitz": "Blitz",
@@ -49,9 +55,18 @@
     "description": "Failed to connect to the server after several attempts. Check your connection and try again.",
     "retryBtn": "Try again"
   },
+  "match": {
+    "switchBoard": "Switch board"
+  },
   "chat": {
     "title": "Chat",
     "empty": "No messages yet",
     "placeholder": "Type a message..."
+  },
+  "gameInvite": {
+    "title": "Game Invitation",
+    "message": "Player {username} invites you to a game",
+    "accept": "Accept",
+    "decline": "Decline"
   }
 }
