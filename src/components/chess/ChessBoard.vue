@@ -16,6 +16,7 @@ interface ChessBoardProps {
   classBoard?: string;
   classPromotion?: string;
   classPockets?: string;
+  classPocketRow?: string;
   config?: Config;
   isPromoting: boolean;
   pocketsInteractive?: boolean;
@@ -89,7 +90,7 @@ const testPocketsOpponent: PocketData = { pawn: 2, knight: 1, bishop: 1, rook: 1
     v-else-if="pocketsOrientation === 'horizontal'"
     :class="cn('flex flex-col gap-1', props.class)"
   >
-    <div class="flex justify-between items-center gap-2">
+    <div :class="cn('flex justify-between items-center gap-2', props.classPocketRow)">
       <ChessPockets orientation="horizontal" color="black" :data="testPocketsOpponent" />
       <slot name="pocket-top-extra" />
     </div>
@@ -97,7 +98,7 @@ const testPocketsOpponent: PocketData = { pawn: 2, knight: 1, bishop: 1, rook: 1
       <div :class="cn('relative', props.classBoard)" ref="board"></div>
       <ChessPromotion v-if="isPromoting" :class="props.classPromotion" color="white" file="b" />
     </div>
-    <div class="flex justify-between items-center gap-2">
+    <div :class="cn('flex justify-between items-center gap-2', props.classPocketRow)">
       <ChessPockets
         orientation="horizontal"
         :class="props.classPockets"

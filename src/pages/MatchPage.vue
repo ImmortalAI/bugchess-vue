@@ -90,14 +90,15 @@ const quickMessages = [
 
 <template>
   <!-- Mobile layout -->
-  <div v-if="isMobile" class="w-full h-full flex flex-col gap-2 px-2 py-2 overflow-y-auto">
+  <div v-if="isMobile" class="w-full h-full flex flex-col gap-2 py-2 overflow-y-auto">
     <!-- Opponent info -->
-    <PlayerPanel username="Opponent" :remaining-ms="180000" :show-clock="false" />
+    <PlayerPanel username="Opponent" :remaining-ms="180000" :show-clock="false" class="px-2" />
 
     <!-- Board with pockets and clocks inside slots -->
     <ChessBoard
       class="w-full"
       class-board="w-full aspect-square"
+      class-pocket-row="px-2"
       :config="mobileBoardConfig"
       :is-promoting="false"
       pockets-orientation="horizontal"
@@ -113,14 +114,14 @@ const quickMessages = [
     </ChessBoard>
 
     <!-- Switch board (full width) -->
-    <Button variant="outline" class="w-full gap-2" @click="onSwitchBoard">
+    <Button variant="outline" class="mx-2 gap-2" @click="onSwitchBoard">
       <ArrowLeftRight class="size-4" />
       {{ t('match.switchBoard') }}
     </Button>
 
     <!-- Mobile chat -->
     <MobileChat
-      class="w-full"
+      class="px-2"
       :messages="matchMessages"
       :quick-messages="quickMessages"
       @send="matchNewMsg"
