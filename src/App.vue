@@ -2,15 +2,21 @@
 import { Toaster } from 'vue-sonner';
 import HeaderComponent from './components/common/HeaderComponent.vue';
 import { useTranslation } from './composables/useTranslation';
-import { useAuthStore } from './stores/auth';
+// import { useAuthStore } from './stores/auth';
+// import { useWebSocketStore } from './stores/ws';
 import { onMounted } from 'vue';
 
 const { restoreLanguage } = useTranslation();
-const auth = useAuthStore();
+// const auth = useAuthStore();
+// const ws = useWebSocketStore();
 
-onMounted(() => {
+onMounted(async () => {
   restoreLanguage();
-  auth.refresh();
+  // TODO: Uncomment in future
+  // const result = await auth.refresh();
+  // if (result.isOk) {
+  //   ws.connect();
+  // }
 });
 </script>
 
