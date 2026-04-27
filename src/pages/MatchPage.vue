@@ -3,6 +3,7 @@ import ChessBoard from '@/components/chess/ChessBoard.vue';
 import { Button } from '@/components/ui/button';
 import { Chat } from '@/components/common/ChatComponent';
 import type { ChatMessage } from '@/components/common/ChatComponent';
+import { MobileChat } from '@/components/common/MobileChatComponent';
 import { useTranslation } from '@/composables/useTranslation';
 import { breakpointsTailwind, useBreakpoints } from '@vueuse/core';
 import { ArrowLeftRight } from 'lucide-vue-next';
@@ -89,7 +90,11 @@ const quickMessages = [
 
 <template>
   <!-- Mobile layout -->
-  <div v-if="isMobile" class="w-full h-full flex flex-col justify-center items-center gap-2 px-2">
+  <div v-if="isMobile" class="w-full h-full flex flex-col gap-2 px-2 py-2 overflow-y-auto">
+    <!-- Opponent info -->
+    <PlayerPanel username="Opponent" :remaining-ms="180000" :show-clock="false" />
+
+    <!-- Board with pockets and clocks inside slots -->
     <ChessBoard
       class="w-full"
       class-board="w-full aspect-square"
@@ -106,9 +111,20 @@ const quickMessages = [
         <ChessClock :remaining-ms="180000" :active="true" />
       </template>
     </ChessBoard>
-    <Button variant="outline" size="sm" @click="onSwitchBoard">
-      <ArrowLeftRight />
+
+    <!-- Switch board (full width) -->
+    <Button variant="outline" class="w-full gap-2" @click="onSwitchBoard">
+      <ArrowLeftRight class="size-4" />
+      {{ t('match.switchBoard') }}
     </Button>
+
+    <!-- Mobile chat -->
+    <MobileChat
+      class="w-full"
+      :messages="matchMessages"
+      :quick-messages="quickMessages"
+      @send="matchNewMsg"
+    />
   </div>
 
   <!-- Desktop layout -->
