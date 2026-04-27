@@ -14,11 +14,13 @@ interface PlayerPanelProps {
    *  'top'          — clock above avatar+name row
    *  'bottom'       — clock below avatar+name row */
   clockPosition?: 'inline' | 'inline-start' | 'top' | 'bottom';
+  showClock?: boolean;
   class?: string;
 }
 
 const props = withDefaults(defineProps<PlayerPanelProps>(), {
   clockPosition: 'inline',
+  showClock: true,
 });
 
 const avatarSrc = computed(() => {
@@ -31,7 +33,7 @@ const avatarSrc = computed(() => {
   <div :class="cn('flex flex-col gap-1', props.class)">
     <!-- Clock above -->
     <ChessClock
-      v-if="clockPosition === 'top'"
+      v-if="showClock && clockPosition === 'top'"
       :remaining-ms="props.remainingMs"
       :active="props.clockActive"
     />
@@ -40,7 +42,11 @@ const avatarSrc = computed(() => {
     <div class="flex items-center gap-2">
       <!-- clock-left layout: [clock] [name] [avatar] -->
       <template v-if="clockPosition === 'inline-start'">
-        <ChessClock :remaining-ms="props.remainingMs" :active="props.clockActive" />
+        <ChessClock
+          v-if="showClock"
+          :remaining-ms="props.remainingMs"
+          :active="props.clockActive"
+        />
         <span class="text-sm font-medium truncate flex-1 min-w-0 text-right">{{
           props.username
         }}</span>
@@ -57,7 +63,7 @@ const avatarSrc = computed(() => {
         </Avatar>
         <span class="text-sm font-medium truncate flex-1 min-w-0">{{ props.username }}</span>
         <ChessClock
-          v-if="clockPosition === 'inline'"
+          v-if="showClock && clockPosition === 'inline'"
           :remaining-ms="props.remainingMs"
           :active="props.clockActive"
         />
@@ -66,7 +72,7 @@ const avatarSrc = computed(() => {
 
     <!-- Clock below -->
     <ChessClock
-      v-if="clockPosition === 'bottom'"
+      v-if="showClock && clockPosition === 'bottom'"
       :remaining-ms="props.remainingMs"
       :active="props.clockActive"
     />

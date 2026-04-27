@@ -65,23 +65,47 @@ const handleSubmit = async () => {
         <div class="flex flex-col gap-4">
           <div class="flex flex-col gap-2">
             <Label for="username">{{ t('authPage.formUsername') }}</Label>
-            <Input id="username" type="text" :placeholder="t('authPage.formUsername')" class="w-full"
-              autocomplete="username" v-model.trim="username" />
+            <Input
+              id="username"
+              type="text"
+              :placeholder="t('authPage.formUsername')"
+              class="w-full"
+              autocomplete="username"
+              v-model.trim="username"
+            />
           </div>
           <div class="flex flex-col gap-2">
             <Label for="email">{{ t('authPage.formEmail') }}</Label>
-            <Input id="email" type="text" :placeholder="t('authPage.formEmail')" class="w-full" autocomplete="email"
-              v-model.trim="email" />
+            <Input
+              id="email"
+              type="text"
+              :placeholder="t('authPage.formEmail')"
+              class="w-full"
+              autocomplete="email"
+              v-model.trim="email"
+            />
           </div>
           <div class="flex flex-col gap-2">
             <Label for="password">{{ t('authPage.formPassword') }}</Label>
-            <Input id="password" type="password" :placeholder="t('authPage.formPassword')" class="w-full"
-              autocomplete="new-password" v-model="password" />
+            <Input
+              id="password"
+              type="password"
+              :placeholder="t('authPage.formPassword')"
+              class="w-full"
+              autocomplete="new-password"
+              v-model="password"
+            />
           </div>
           <div class="flex flex-col gap-2">
             <Label for="confirm-password">{{ t('authPage.formPasswordRepeat') }}</Label>
-            <Input id="confirm-password" type="password" :placeholder="t('authPage.formPasswordRepeat')" class="w-full"
-              autocomplete="new-password" v-model="repeatPassword" />
+            <Input
+              id="confirm-password"
+              type="password"
+              :placeholder="t('authPage.formPasswordRepeat')"
+              class="w-full"
+              autocomplete="new-password"
+              v-model="repeatPassword"
+            />
           </div>
           <Button type="submit" class="w-full">{{ t('authPage.formRegisterSubmit') }}</Button>
           <span v-show="errorMsg" class="text-red-500 animate-shake">{{ errorMsg }}</span>
@@ -92,7 +116,7 @@ const handleSubmit = async () => {
       <div class="flex flex-col gap-2 w-full">
         <Button variant="outline" class="w-full" @click="router.push('/signin')">{{
           t('authPage.formLoginSubmit')
-          }}</Button>
+        }}</Button>
       </div>
     </CardFooter>
   </Card>

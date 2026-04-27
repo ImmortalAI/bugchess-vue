@@ -57,13 +57,17 @@ const avatarSvg = computed(() => multiavatar(displayName.value));
           class="transition-colors"
           :class="locale === 'ru' ? 'font-semibold' : 'text-muted-foreground hover:text-foreground'"
           @click="setLanguage('ru')"
-        >RU</button>
+        >
+          RU
+        </button>
         <span class="text-muted-foreground">·</span>
         <button
           class="transition-colors"
           :class="locale === 'en' ? 'font-semibold' : 'text-muted-foreground hover:text-foreground'"
           @click="setLanguage('en')"
-        >EN</button>
+        >
+          EN
+        </button>
       </div>
 
       <DropdownMenuItem @click="toggleDark()">
