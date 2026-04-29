@@ -2,9 +2,10 @@
 import ChessBoard from '@/components/chess/ChessBoard.vue';
 import { Button } from '@/components/ui/button';
 import { Chat } from '@/components/common/ChatComponent';
-import type { ChatMessage } from '@/components/common/ChatComponent';
 import { MobileChat } from '@/components/common/MobileChatComponent';
 import { useTranslation } from '@/composables/useTranslation';
+import { useAuthStore } from '@/stores/auth';
+import { useGameStore } from '@/stores/game';
 import { breakpointsTailwind, useBreakpoints } from '@vueuse/core';
 import { ArrowLeftRight } from 'lucide-vue-next';
 import { ref } from 'vue';
@@ -16,6 +17,9 @@ import ChessClock from '@/components/chess/ChessClock.vue';
 const isMobile = useBreakpoints(breakpointsTailwind).smaller('md');
 
 const { t } = useTranslation();
+
+const auth = useAuthStore();
+const game = useGameStore();
 
 const myBoardConfig: Config = {
   fen: '8/8/8/8/8/8/4P3/4K3',
@@ -46,33 +50,8 @@ const onSwitchBoard = () => {
   boardReversed.value = !boardReversed.value;
 };
 
-const matchMessages = ref<ChatMessage[]>([]);
-
-const isMsgPending = ref(false);
-
-const matchNewMsg = async (message: string) => {
-  isMsgPending.value = true;
-
-  await new Promise((resolve) => setTimeout(resolve, 1000));
-
-  matchMessages.value.push({
-    sender: 'Unknown',
-    text: message,
-    isOwn: true,
-  });
-  isMsgPending.value = false;
-
-  simulateOpponentMsg('Привет! Твое сообщение: ' + message);
-};
-
-const simulateOpponentMsg = async (message: string) => {
-  await new Promise((resolve) => setTimeout(resolve, 1500));
-
-  matchMessages.value.push({
-    sender: 'Opponent',
-    text: message,
-    isOwn: false,
-  });
+const matchNewMsg = (message: string) => {
+  game.sendChatMessage(message, auth.user?.username ?? 'Me');
 };
 
 const onDropNewPiece = (piece: Piece, key: Key) => {
@@ -122,7 +101,7 @@ const quickMessages = [
     <!-- Mobile chat -->
     <MobileChat
       class="px-2"
-      :messages="matchMessages"
+      :messages="game.chatMessages"
       :quick-messages="quickMessages"
       @send="matchNewMsg"
     />
@@ -173,7 +152,7 @@ const quickMessages = [
         :title="t('chat.title')"
         :empty-placeholder="t('chat.empty')"
         :input-placeholder="t('chat.placeholder')"
-        :messages="matchMessages"
+        :messages="game.chatMessages"
         @send="matchNewMsg"
         :quick-messages="quickMessages"
       />

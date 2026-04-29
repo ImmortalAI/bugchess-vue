@@ -49,7 +49,8 @@
     "myTeam": "My team",
     "enemyTeam": "Enemy team",
     "rating": "Rating",
-    "startGame": "Start Matchmaking"
+    "startGame": "Start Matchmaking",
+    "cancelSearch": "Cancel Search"
   },
   "serverUnavailable": {
     "title": "Server Unavailable",

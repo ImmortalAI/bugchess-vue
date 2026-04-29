@@ -8,26 +8,28 @@ import { useAuthStore } from '@/stores/auth';
 import { useSessionStore } from '@/stores/session';
 import { useWebSocketStore } from '@/stores/ws';
 import { quickGameOptions, type QuickGameOption } from '@/utils/quickGameOptions';
-import { computed, ref } from 'vue';
+import { computed } from 'vue';
 import { useRouter } from 'vue-router';
 
 const { t } = useTranslation();
-
-const inviteVisible = ref(true);
-const inviterUsername = ref('PlayerName');
-
-const onInviteAccept = () => {
-  inviteVisible.value = false;
-};
-
-const onInviteDecline = () => {
-  inviteVisible.value = false;
-};
 
 const auth = useAuthStore();
 const session = useSessionStore();
 const ws = useWebSocketStore();
 const router = useRouter();
+
+const inviteVisible = computed(() => session.pendingInvite !== null);
+const inviterUsername = computed(() => session.pendingInvite ?? '');
+
+const onInviteAccept = () => {
+  ws.sendMessage({ type: WsMsgType.INVITE_ACCEPT, data: {} });
+  session.setPendingInvite(null);
+};
+
+const onInviteDecline = () => {
+  ws.sendMessage({ type: WsMsgType.INVITE_REJECT, data: {} });
+  session.setPendingInvite(null);
+};
 
 const isBlocked = computed(() => session.isInLobby || session.isInGame);
 
@@ -44,7 +46,6 @@ const createLobby = (option: QuickGameOption) => {
   const increment = incrementPart ?? 0;
 
   session.setLobbyOptimistic(
-    auth.user!.id,
     { userId: auth.user!.id, username: auth.user!.username, rating: auth.user!.rating },
     time,
     increment,

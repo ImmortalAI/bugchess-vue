@@ -9,20 +9,23 @@ export type PocketData = {
 };
 
 export type BughousePockets = {
-  // Pockets on the main board
+  /** player's own pieces available to drop */
   my: PocketData;
-  opponent: PocketData;
-  // Partner's pocket on the second board (for display)
+  /** opponent's pieces available to drop (same board) */
+  opp: PocketData;
+  /** partner's pieces available to drop (mate board display) */
   mate: PocketData;
 };
 
 export type BughouseConfig = {
+  /** main board position */
   fen: string;
-  mateFen: string;
-  //Last Move
+  /** partner board position */
+  mFen: string;
+  /** last move as [from, to] squares */
   lm?: Key[];
-  // Orientation
+  /** board orientation for this player */
   orn: 'white' | 'black';
-  // Pockets
+  /** pocket state for all three sides */
   p: BughousePockets;
 };

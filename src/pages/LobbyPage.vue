@@ -6,12 +6,22 @@ import Label from '@/components/ui/label/Label.vue';
 import Switch from '@/components/ui/switch/Switch.vue';
 import { useTranslation } from '@/composables/useTranslation';
 import { useLobbyStore } from '@/stores/lobby';
-import { useRouter } from 'vue-router';
+import { useSessionStore } from '@/stores/session';
+import { useWebSocketStore } from '@/stores/ws';
+import { WsMsgType } from '@/api/websocket/websocket.model';
 
 const { t } = useTranslation();
 const lobby = useLobbyStore();
+const session = useSessionStore();
+const ws = useWebSocketStore();
 
-const router = useRouter();
+const toggleMatchmaking = () => {
+  if (session.isInQueue) {
+    ws.sendMessage({ type: WsMsgType.CANCEL_MM, data: {} });
+  } else {
+    ws.sendMessage({ type: WsMsgType.START_MM, data: {} });
+  }
+};
 </script>
 
 <template>
@@ -48,7 +58,12 @@ const router = useRouter();
           <Switch id="rating-switch" />
           <Label for="rating-switch">{{ t('lobby.rating') }}</Label>
         </div>
-        <Button @click="router.push('/match')">{{ t('lobby.startGame') }}</Button>
+        <Button
+          :variant="session.isInQueue ? 'outline' : 'default'"
+          @click="toggleMatchmaking"
+        >
+          {{ session.isInQueue ? t('lobby.cancelSearch') : t('lobby.startGame') }}
+        </Button>
       </div>
     </div>
   </div>

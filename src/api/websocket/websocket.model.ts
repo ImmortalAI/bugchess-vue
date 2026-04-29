@@ -17,7 +17,6 @@ export const WsMsgType = {
   INVITE_SEND: 43,
   INVITE_ACCEPT: 44,
   INVITE_REJECT: 45,
-  // Combined time control + rated mode (was LOBBY_TIME; LOBBY_RATING merged in)
   LOBBY_CONFIG: 46,
   START_MM: 48,
   CANCEL_MM: 49,
@@ -26,13 +25,11 @@ export const WsMsgType = {
   LOBBY_JOIN: 60,
   LOBBY_KICKED: 61,
   INVITE_RECEIVE: 62,
-  // Combined time + rated update (was LOBBY_TIME_UPDATE; LOBBY_RATING_UPDATE merged in)
   LOBBY_CONFIG_UPDATE: 63,
   LOBBY_START_MM: 65,
   LOBBY_CANCEL_MM: 66,
 
   // GAME CLIENT
-  // UCI notation covers both regular moves ("e2e4") and drops ("P@e4")
   GAME_MOVE: 80,
   GAME_REQ_SYNC: 82,
   GAME_CHAT_MSG_SEND: 83,
@@ -40,7 +37,6 @@ export const WsMsgType = {
   // GAME SERVER
   GAME_JOIN: 100,
   GAME_SYNC: 101,
-  // UCI; covers opponent drops too (was separate GAME_OPPONENT_DROP)
   GAME_OPPONENT_MOVE: 102,
   GAME_MATE_BOARD_UPDATE: 104,
   GAME_CHAT_MSG_RECEIVE: 105,
@@ -49,7 +45,7 @@ export const WsMsgType = {
   ERROR: 999,
 } as const;
 
-// ─── Payload types ────────────────────────────────────────────────────────────
+// *** PAYLOAD TYPES ***
 
 /** UCI-encoded move string.
  *  Regular move: `"e2e4"` — Drop: `"P@e4"` */
@@ -77,8 +73,8 @@ export type WsMatePocketDiff = {
 export type WsMateMoveData = {
   /** fen — position after the move */
   fen: string;
-  /** lm — last move as [from, to] squares */
-  lm?: [Key, Key];
+  /** lm — last move as [from, to] squares or [to] for a drop */
+  lm?: [Key, Key] | [Key];
   /** pd — pocket diff: piece added to the main board from a capture on the mate board */
   pd?: WsPocketDiff;
   /** mpd — mate pocket diff: piece removed from the mate board after a drop */
@@ -93,8 +89,7 @@ export type WsLobbyTimeData = {
   s: number;
 };
 
-/** Combined lobby configuration: time control and rated-game flag.
- *  Used for both LOBBY_CONFIG (client→server) and LOBBY_CONFIG_UPDATE (server→client). */
+/** Combined lobby configuration: time control and rated-game flag. */
 export type WsLobbyConfigData = {
   /** t — time control */
   t: WsLobbyTimeData;
@@ -102,10 +97,10 @@ export type WsLobbyConfigData = {
   r: boolean;
 };
 
-/** Reference to a user by ID, used for invite and kick actions. */
-export type WsUserIdData = {
-  /** uid — target user's ID */
-  uid: string;
+/** Target player by username, used for invite and kick actions. */
+export type WsUsernameData = {
+  /** n — target player's username */
+  n: string;
 };
 
 /** A single chat message payload. */
@@ -116,8 +111,6 @@ export type WsChatData = {
 
 /** A player occupying one of the four lobby seats. */
 export type WsSeatData = {
-  /** uid — user ID */
-  uid: string;
   /** n — display name */
   n: string;
   /** r — current rating */
@@ -125,14 +118,14 @@ export type WsSeatData = {
 };
 
 /** Full lobby state snapshot sent by the server.
- *  Seats are ordered: `[teamA_slot0, teamA_slot1, teamB_slot0, teamB_slot1]`, `null` = empty. */
+ *  `s` is a map of seat index → player (null = empty):
+ *  - `0` — team A, slot 0 (lobby owner)
+ *  - `1` — team A, slot 1
+ *  - `2` — team B, slot 0
+ *  - `3` — team B, slot 1 */
 export type WsLobbyStateData = {
-  /** id — lobby ID */
-  id: string;
-  /** oid — owner's user ID */
-  oid: string;
-  /** s — four seats */
-  s: (WsSeatData | null)[];
+  /** s — seats map: key 0-3, null if empty */
+  s: Record<0 | 1 | 2 | 3, WsSeatData | null>;
   /** t — current time control */
   t: WsLobbyTimeData;
   /** r — rated game enabled */
@@ -143,89 +136,89 @@ export type WsLobbyStateData = {
   p: number | null;
 };
 
-// ─── Message types ────────────────────────────────────────────────────────────
+// *** MESSAGE TYPES ***
 
 // BASE CLIENT
 
-/** CLIENT→SERVER: Keep-alive ping. Server responds with PONG (20). */
+/** Keep-alive ping. Server responds with PONG (20). */
 export type WsPingMsg = { type: (typeof WsMsgType)['PING']; data: Record<string, never> };
 
 // BASE SERVER
 
-/** SERVER→CLIENT: Keep-alive response to PING (0). */
+/** Keep-alive response to PING (0). */
 export type WsPongMsg = { type: (typeof WsMsgType)['PONG']; data: Record<string, never> };
 
 // LOBBY CLIENT
 
-/** CLIENT→SERVER: Create a new lobby with the given initial time control. */
+/**  Create a new lobby with the given initial time control. */
 export type WsCreateLobbyMsg = { type: (typeof WsMsgType)['LOBBY_CREATE']; data: WsLobbyTimeData };
 
-/** CLIENT→SERVER: Leave the current lobby. */
+/**  Leave the current lobby. */
 export type WsLeaveLobbyMsg = {
   type: (typeof WsMsgType)['LOBBY_LEAVE'];
   data: Record<string, never>;
 };
 
-/** CLIENT→SERVER: Kick a player from the lobby (owner only). */
-export type WsKickLobbyMsg = { type: (typeof WsMsgType)['LOBBY_KICK']; data: WsUserIdData };
+/**  Kick a player from the lobby (owner only). */
+export type WsKickLobbyMsg = { type: (typeof WsMsgType)['LOBBY_KICK']; data: WsUsernameData };
 
-/** CLIENT→SERVER: Send a game invite to another player. */
-export type WsInviteSendMsg = { type: (typeof WsMsgType)['INVITE_SEND']; data: WsUserIdData };
+/**  Send a game invite to another player. */
+export type WsInviteSendMsg = { type: (typeof WsMsgType)['INVITE_SEND']; data: WsUsernameData };
 
-/** CLIENT→SERVER: Accept a pending game invite. */
+/**  Accept a pending game invite. */
 export type WsInviteAcceptMsg = {
   type: (typeof WsMsgType)['INVITE_ACCEPT'];
   data: Record<string, never>;
 };
 
-/** CLIENT→SERVER: Reject a pending game invite. */
+/**  Reject a pending game invite. */
 export type WsInviteRejectMsg = {
   type: (typeof WsMsgType)['INVITE_REJECT'];
   data: Record<string, never>;
 };
 
-/** CLIENT→SERVER: Update the lobby's time control and rated-game setting. */
+/**  Update the lobby's time control and rated-game setting. */
 export type WsLobbyConfigMsg = {
   type: (typeof WsMsgType)['LOBBY_CONFIG'];
   data: WsLobbyConfigData;
 };
 
-/** CLIENT→SERVER: Start matchmaking from the current lobby. */
+/**  Start matchmaking from the current lobby. */
 export type WsStartMMMsg = { type: (typeof WsMsgType)['START_MM']; data: Record<string, never> };
 
-/** CLIENT→SERVER: Cancel an ongoing matchmaking search. */
+/**  Cancel an ongoing matchmaking search. */
 export type WsCancelMMMsg = { type: (typeof WsMsgType)['CANCEL_MM']; data: Record<string, never> };
 
 // LOBBY SERVER
 
-/** SERVER→CLIENT: Full lobby state snapshot sent on join or any state change. */
+/** Full lobby state snapshot sent on join or any state change. */
 export type WsLobbyJoinMsg = { type: (typeof WsMsgType)['LOBBY_JOIN']; data: WsLobbyStateData };
 
-/** SERVER→CLIENT: The client was kicked from the lobby. */
+/** The client was kicked from the lobby. */
 export type WsLobbyKickedMsg = {
   type: (typeof WsMsgType)['LOBBY_KICKED'];
   data: Record<string, never>;
 };
 
-/** SERVER→CLIENT: Another player sent the client a game invite. */
+/** Another player sent the client a game invite. */
 export type WsInviteReceiveMsg = {
   type: (typeof WsMsgType)['INVITE_RECEIVE'];
-  data: WsUserIdData;
+  data: WsUsernameData;
 };
 
-/** SERVER→CLIENT: Lobby time control or rated setting was changed. */
+/** Lobby time control or rated setting was changed. */
 export type WsLobbyConfigUpdateMsg = {
   type: (typeof WsMsgType)['LOBBY_CONFIG_UPDATE'];
   data: WsLobbyConfigData;
 };
 
-/** SERVER→CLIENT: Matchmaking search has started. */
+/** Matchmaking search has started. */
 export type WsLobbyStartMMMsg = {
   type: (typeof WsMsgType)['LOBBY_START_MM'];
   data: Record<string, never>;
 };
 
-/** SERVER→CLIENT: Matchmaking search was cancelled. */
+/** Matchmaking search was cancelled. */
 export type WsLobbyCancelMMMsg = {
   type: (typeof WsMsgType)['LOBBY_CANCEL_MM'];
   data: Record<string, never>;
@@ -233,17 +226,17 @@ export type WsLobbyCancelMMMsg = {
 
 // GAME CLIENT
 
-/** CLIENT→SERVER: Make a move or drop a piece (UCI notation).
+/**  Make a move or drop a piece (UCI notation).
  *  Regular move: `"e2e4"` — Drop: `"P@e4"` */
 export type WsGameMoveMsg = { type: (typeof WsMsgType)['GAME_MOVE']; data: WsMoveUciData };
 
-/** CLIENT→SERVER: Request a full game state resync. */
+/**  Request a full game state resync. */
 export type WsGameReqSyncMsg = {
   type: (typeof WsMsgType)['GAME_REQ_SYNC'];
   data: Record<string, never>;
 };
 
-/** CLIENT→SERVER: Send a chat message in the game room. */
+/**  Send a chat message in the game room. */
 export type WsGameChatSendMsg = {
   type: (typeof WsMsgType)['GAME_CHAT_MSG_SEND'];
   data: WsChatData;
@@ -251,25 +244,25 @@ export type WsGameChatSendMsg = {
 
 // GAME SERVER
 
-/** SERVER→CLIENT: Initial game state on join. */
+/** Initial game state on join. */
 export type WsGameJoinMsg = { type: (typeof WsMsgType)['GAME_JOIN']; data: BughouseConfig };
 
-/** SERVER→CLIENT: Full game state resync (response to GAME_REQ_SYNC). */
+/** Full game state resync (response to GAME_REQ_SYNC). */
 export type WsGameSyncMsg = { type: (typeof WsMsgType)['GAME_SYNC']; data: BughouseConfig };
 
-/** SERVER→CLIENT: Opponent made a move or drop on the main board (UCI). */
+/** Opponent made a move or drop on the main board (UCI). */
 export type WsGameOpponentMoveMsg = {
   type: (typeof WsMsgType)['GAME_OPPONENT_MOVE'];
   data: WsMoveUciData;
 };
 
-/** SERVER→CLIENT: A move or drop occurred on the mate (partner's) board. */
+/** A move or drop occurred on the mate (partner's) board. */
 export type WsGameMateBoardUpdateMsg = {
   type: (typeof WsMsgType)['GAME_MATE_BOARD_UPDATE'];
   data: WsMateMoveData;
 };
 
-/** SERVER→CLIENT: A chat message was received in the game room. */
+/** A chat message was received in the game room. */
 export type WsGameChatReceiveMsg = {
   type: (typeof WsMsgType)['GAME_CHAT_MSG_RECEIVE'];
   data: WsChatData;
@@ -279,7 +272,7 @@ export type WsGameChatReceiveMsg = {
 
 /** All message types the client can receive from the server. */
 export type WsIncomingData =
-  | WsPingMsg
+  | WsPongMsg
   | WsLobbyJoinMsg
   | WsLobbyKickedMsg
   | WsInviteReceiveMsg
@@ -294,7 +287,7 @@ export type WsIncomingData =
 
 /** All message types the client can send to the server. */
 export type WsOutgoingData =
-  | WsPongMsg
+  | WsPingMsg
   | WsCreateLobbyMsg
   | WsLeaveLobbyMsg
   | WsKickLobbyMsg

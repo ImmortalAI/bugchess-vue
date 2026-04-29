@@ -8,10 +8,13 @@ export const useSessionStore = defineStore('session', () => {
   const state = ref<PlayerState>('Idle');
   const lobby = ref<LobbyState | null>(null);
   const gameId = ref<string | null>(null);
+  /** username of the player who sent an invite, null if no pending invite */
+  const pendingInvite = ref<string | null>(null);
 
   const isIdle = computed(() => state.value === 'Idle');
   const isInLobby = computed(() => state.value === 'Lobby');
   const isInGame = computed(() => state.value === 'Game');
+  const isInQueue = computed(() => !!lobby.value?.inQueue);
 
   const setIdle = () => {
     state.value = 'Idle';
@@ -32,18 +35,16 @@ export const useSessionStore = defineStore('session', () => {
   };
 
   const setLobbyOptimistic = (
-    ownerId: string,
     ownerSlot: LobbyPlayerSlot,
     time: number,
     increment: number,
   ) => {
     state.value = 'Lobby';
     lobby.value = {
-      id: '',
-      ownerId,
       time,
       increment,
       rated: false,
+      inQueue: false,
       myTeam: [ownerSlot, null],
       enemyTeam: [null, null],
     };
@@ -57,6 +58,11 @@ export const useSessionStore = defineStore('session', () => {
     lobby.value = { ...lobby.value, ...settings };
   };
 
+  const setMatchmaking = (active: boolean) => {
+    if (!lobby.value) return;
+    lobby.value = { ...lobby.value, inQueue: active };
+  };
+
   const updateLobbyPlayerSlot = (
     teamKey: 'myTeam' | 'enemyTeam',
     slotIndex: 0 | 1,
@@ -68,18 +74,26 @@ export const useSessionStore = defineStore('session', () => {
     lobby.value = { ...lobby.value, [teamKey]: team };
   };
 
+  const setPendingInvite = (uid: string | null) => {
+    pendingInvite.value = uid;
+  };
+
   return {
     state,
     lobby,
     gameId,
+    pendingInvite,
     isIdle,
     isInLobby,
     isInGame,
+    isInQueue,
     setIdle,
     setLobby,
     setGame,
     setLobbyOptimistic,
     updateLobbySettings,
+    setMatchmaking,
     updateLobbyPlayerSlot,
+    setPendingInvite,
   };
 });

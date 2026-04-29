@@ -17,6 +17,7 @@ import {
 } from '@/api/websocket/websocket.model';
 import { useWebSocketStore } from './ws';
 import type { BughouseConfig, PocketData } from '@/api/chess/chess.model';
+import type { ChatMessage } from '@/components/common/ChatComponent/types';
 
 export const useGameStore = defineStore('game', () => {
   const api = shallowRef<Crazyhouse | null>(null);
@@ -26,6 +27,7 @@ export const useGameStore = defineStore('game', () => {
 
   const isPromoting = ref(false);
   const promotionMoveCache = ref<{ from: Square; to: Square } | null>(null);
+  const chatMessages = ref<ChatMessage[]>([]);
 
   // Pockets of both players on the mate (partner's) board.
   // partner = pieces the partner can drop; opponent = pieces the partner's opponent can drop.
@@ -152,7 +154,7 @@ export const useGameStore = defineStore('game', () => {
       playNormal(parsed);
       updateBoardState([chessIdxToSqr(parsed.from), chessIdxToSqr(parsed.to)]);
     } else {
-      // Drop: chessops correctly decrements the opponent's pocket (initialized from cfg.p.opponent)
+      // Drop: chessops correctly decrements the opponent's pocket (initialized from cfg.p.opp)
       api.value.play(parsed);
       updateBoardState([chessIdxToSqr(parsed.to)]);
     }
@@ -177,7 +179,17 @@ export const useGameStore = defineStore('game', () => {
     }
   };
 
+  const addChatMessage = (sender: string, text: string, isOwn: boolean) => {
+    chatMessages.value = [...chatMessages.value, { sender, text, isOwn }];
+  };
+
+  const sendChatMessage = (text: string, senderName: string) => {
+    ws.sendMessage({ type: WsMsgType.GAME_CHAT_MSG_SEND, data: { m: text } });
+    addChatMessage(senderName, text, true);
+  };
+
   const setup = (cfg: BughouseConfig) => {
+    chatMessages.value = [];
     const parsedFen = parseFen(cfg.fen);
     if (parsedFen.isErr) {
       throw new ChessError('Invalid FEN: ' + cfg.fen);
@@ -189,7 +201,7 @@ export const useGameStore = defineStore('game', () => {
     const pockets = Material.empty();
     const opponentColor = cfg.orn === 'white' ? 'black' : 'white';
     Object.assign(pockets[cfg.orn], cfg.p.my);
-    Object.assign(pockets[opponentColor], cfg.p.opponent);
+    Object.assign(pockets[opponentColor], cfg.p.opp);
     fenSetup.pockets = pockets;
 
     api.value = Crazyhouse.fromSetup(fenSetup).unwrap();
@@ -217,7 +229,7 @@ export const useGameStore = defineStore('game', () => {
     };
 
     mateBoardState.value = {
-      fen: cfg.mateFen,
+      fen: cfg.mFen,
       orientation: cfg.orn === 'white' ? 'black' : 'white',
       viewOnly: true,
     };
@@ -229,11 +241,14 @@ export const useGameStore = defineStore('game', () => {
     mainBoardState,
     mateBoardState,
     matePockets,
+    chatMessages,
     setup,
     promote,
     move,
     drop,
     moveOpponent,
     mateMove,
+    addChatMessage,
+    sendChatMessage,
   };
 });

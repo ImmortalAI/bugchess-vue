@@ -49,7 +49,8 @@
     "myTeam": "Моя команда",
     "enemyTeam": "Команда противника",
     "rating": "Рейтинговая игра",
-    "startGame": "Начать поиск игры"
+    "startGame": "Начать поиск игры",
+    "cancelSearch": "Отменить поиск"
   },
   "serverUnavailable": {
     "title": "Сервер недоступен",
