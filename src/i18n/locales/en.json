@@ -3,7 +3,8 @@
     "loginBtn": "Login",
     "guest": "Guest",
     "themeLight": "Light theme",
-    "themeDark": "Dark theme"
+    "themeDark": "Dark theme",
+    "settings": "Settings"
   },
   "authPage": {
     "infoTitle": "Welcome to Bugchess",
@@ -68,5 +69,15 @@
     "message": "Player {username} invites you to a game",
     "accept": "Accept",
     "decline": "Decline"
+  },
+  "settings": {
+    "pageTitle": "Settings",
+    "profileTitle": "Profile",
+    "passwordTitle": "Change password",
+    "currentPassword": "Current password",
+    "newPassword": "New password",
+    "save": "Save",
+    "saveSuccess": "Profile updated",
+    "saveError": "Failed to save changes"
   }
 }

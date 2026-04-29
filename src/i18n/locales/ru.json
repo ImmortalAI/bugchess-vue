@@ -3,7 +3,8 @@
     "loginBtn": "Войти",
     "guest": "Гость",
     "themeLight": "Светлая тема",
-    "themeDark": "Тёмная тема"
+    "themeDark": "Тёмная тема",
+    "settings": "Настройки"
   },
   "authPage": {
     "infoTitle": "Добро пожаловать на Bugchess",
@@ -68,5 +69,15 @@
     "message": "Вас приглашает игрок {username}",
     "accept": "Принять",
     "decline": "Отклонить"
+  },
+  "settings": {
+    "pageTitle": "Настройки",
+    "profileTitle": "Профиль",
+    "passwordTitle": "Смена пароля",
+    "currentPassword": "Текущий пароль",
+    "newPassword": "Новый пароль",
+    "save": "Сохранить",
+    "saveSuccess": "Профиль обновлён",
+    "saveError": "Не удалось сохранить изменения"
   }
 }
