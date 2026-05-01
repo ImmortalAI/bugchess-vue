@@ -100,6 +100,7 @@ const quickMessages = [
       :pockets-interactive="!boardReversed"
       :pockets="mobilePockets"
       :pockets-opponent="mobilePocketsOpponent"
+      :opponent-move="boardReversed ? null : game.pendingOpponentMove"
       @drop-new-piece="() => {}"
     >
       <template #pocket-top-extra>
@@ -159,6 +160,7 @@ const quickMessages = [
         :is-promoting="game.isPromoting"
         :pockets="mainMyPocket"
         :pockets-opponent="mainOpponentPocket"
+        :opponent-move="game.pendingOpponentMove"
         pockets-orientation="vertical"
         pockets-interactive
         resizable

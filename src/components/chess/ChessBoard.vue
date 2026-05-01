@@ -4,7 +4,7 @@ import { ChessError } from '@/utils/chessError';
 import ChessPromotion from '@/components/chess/ChessPromotion.vue';
 import { cn } from '@/lib/utils';
 import type { Config } from '@lichess-org/chessground/config';
-import type { Color } from '@lichess-org/chessground/types';
+import type { Color, Key } from '@lichess-org/chessground/types';
 import { Chessground } from '@lichess-org/chessground';
 import ChessPockets from './ChessPockets.vue';
 import type { PocketData } from '@/api/chess/chess.model';
@@ -26,6 +26,8 @@ interface ChessBoardProps {
   pockets?: PocketData;
   /** Pieces available to the player at the top of the board. */
   pocketsOpponent?: PocketData;
+  /** Opponent's last normal move to animate; null/undefined for full FEN reset. */
+  opponentMove?: [Key, Key] | null;
 }
 
 const props = defineProps<ChessBoardProps>();
@@ -42,10 +44,16 @@ onMounted(() => {
 });
 
 watch(
-  () => props.config,
-  (newValue) => {
-    if (api.value === null || newValue === undefined) return;
-    api.value.set(newValue);
+  () => [props.config, props.opponentMove] as const,
+  ([config, opponentMove], [prevConfig]) => {
+    if (api.value === null || config === undefined) return;
+    const boardSwitched = config.orientation !== prevConfig?.orientation;
+    if (opponentMove && !boardSwitched) {
+      api.value.move(opponentMove[0], opponentMove[1]);
+      api.value.set({ ...config, fen: undefined });
+    } else {
+      api.value.set(config);
+    }
   },
 );
 

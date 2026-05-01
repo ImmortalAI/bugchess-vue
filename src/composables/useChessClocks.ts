@@ -2,7 +2,7 @@ import { useDocumentVisibility, useRafFn } from '@vueuse/core';
 import { reactive, watch } from 'vue';
 
 /** All four clock slots: two boards, two colors. */
-const CLOCK_IDS = ['mainBoardW', 'mainBoardB', 'mateBoardW', 'mateBoardB'] as const;
+const CLOCK_IDS = ['mainWhite', 'mainBlack', 'mateWhite', 'mateBlack'] as const;
 
 export type ClockId = (typeof CLOCK_IDS)[number];
 
@@ -23,10 +23,10 @@ type Clocks = Record<ClockId, ClockState>;
 export function useChessClocks() {
   /** Reactive map of all four clocks. */
   const clocks = reactive<Clocks>({
-    mainBoardW: { remainingMs: 0, active: false },
-    mainBoardB: { remainingMs: 0, active: false },
-    mateBoardW: { remainingMs: 0, active: false },
-    mateBoardB: { remainingMs: 0, active: false },
+    mainWhite: { remainingMs: 0, active: false },
+    mainBlack: { remainingMs: 0, active: false },
+    mateWhite: { remainingMs: 0, active: false },
+    mateBlack: { remainingMs: 0, active: false },
   });
 
   /**
@@ -134,5 +134,26 @@ export function useChessClocks() {
     clocks[id].remainingMs = ms;
   }
 
-  return { clocks, start, stop, reset, resetAll, sync };
+  function toggle(board: 'main' | 'mate') {
+    const w: ClockId = board === 'main' ? 'mainWhite' : 'mateWhite';
+    const b: ClockId = board === 'main' ? 'mainBlack' : 'mateBlack';
+    if (clocks[w].active) {
+      stop(w);
+      start(b);
+    } else if (clocks[b].active) {
+      stop(b);
+      start(w);
+    }
+  }
+
+  /** Stop all clocks and zero their remaining time. */
+  function clear() {
+    pauseLoop();
+    for (const id of CLOCK_IDS) {
+      clocks[id].active = false;
+      clocks[id].remainingMs = 0;
+    }
+  }
+
+  return { clocks, start, stop, reset, resetAll, sync, toggle, clear };
 }

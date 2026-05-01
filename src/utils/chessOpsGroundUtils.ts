@@ -50,11 +50,11 @@ export const isFLLine = (color: 'white' | 'black', to: Key) =>
 export const colorToClockId = (color: Color, board: 'main' | 'mate'): ClockId =>
   board === 'main'
     ? color === 'white'
-      ? 'mainBoardW'
-      : 'mainBoardB'
+      ? 'mainWhite'
+      : 'mainBlack'
     : color === 'white'
-      ? 'mateBoardW'
-      : 'mateBoardB';
+      ? 'mateWhite'
+      : 'mateBlack';
 
 export const isGameStarted = (setup: { fullmoves: number; turn: Color }) =>
   setup.fullmoves > 1 || (setup.fullmoves === 1 && setup.turn === 'black');

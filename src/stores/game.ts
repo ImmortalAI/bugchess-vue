@@ -7,7 +7,7 @@ import {
   isGameStarted,
 } from '@/utils/chessOpsGroundUtils';
 import type { Config } from '@lichess-org/chessground/config';
-import type { Key, MoveMetadata } from '@lichess-org/chessground/types';
+import type { Key } from '@lichess-org/chessground/types';
 import { makeFen, parseFen } from 'chessops/fen';
 import { Material } from 'chessops/setup';
 import { makeUci, parseUci } from 'chessops/util';
@@ -27,6 +27,16 @@ import type { BughouseData, PlayerInfo, PocketData } from '@/api/chess/chess.mod
 import type { ChatMessage } from '@/components/common/ChatComponent/types';
 
 export const useGameStore = defineStore('game', () => {
+  const ws = useWebSocketStore();
+  const {
+    clocks,
+    start: startClock,
+    reset: resetClock,
+    sync: syncClock,
+    toggle: toggleClock,
+    clear: clearClocks,
+  } = useChessClocks();
+
   const api = shallowRef<Crazyhouse | null>(null);
 
   const mainBoardState = shallowRef<Config | undefined>(undefined);
@@ -58,41 +68,31 @@ export const useGameStore = defineStore('game', () => {
   /** Game result; null while the game is in progress. */
   const gameStatus = ref<BughouseData['status']>(null);
 
-  const ws = useWebSocketStore();
-  const {
-    clocks,
-    start: startClock,
-    stop: stopClock,
-    reset: resetClock,
-    sync: syncClock,
-  } = useChessClocks();
-
   // Clock IDs derived from the current player's board orientation.
   const myClockId = computed<ClockId>(() =>
-    mainBoardState.value?.orientation === 'white' ? 'mainBoardW' : 'mainBoardB',
+    mainBoardState.value?.orientation === 'white' ? 'mainWhite' : 'mainBlack',
   );
   const opponentClockId = computed<ClockId>(() =>
-    myClockId.value === 'mainBoardW' ? 'mainBoardB' : 'mainBoardW',
+    myClockId.value === 'mainWhite' ? 'mainBlack' : 'mainWhite',
   );
   // Standard Bughouse: if I'm white on main, my partner is black on mate (and vice versa).
   const partnerClockId = computed<ClockId>(() =>
-    myClockId.value === 'mainBoardW' ? 'mateBoardB' : 'mateBoardW',
+    myClockId.value === 'mainWhite' ? 'mateBlack' : 'mateWhite',
   );
   const enemyClockId = computed<ClockId>(() =>
-    myClockId.value === 'mainBoardW' ? 'mateBoardW' : 'mateBoardB',
+    myClockId.value === 'mainWhite' ? 'mateWhite' : 'mateBlack',
   );
 
-  const toggleMainClock = (movedColor: Color) => {
-    stopClock(colorToClockId(movedColor, 'main'));
-    startClock(colorToClockId(movedColor === 'white' ? 'black' : 'white', 'main'));
-  };
+  const pendingOpponentMove = ref<[Key, Key] | null>(null);
 
   const updateBoardState = (lastMove?: Key[]) => {
     if (!api.value) return;
 
-    const dests = chessIdxToSqr(api.value.allDests());
-    const check = api.value.isCheck();
     const turnColor = api.value.turn;
+    const myColor = mainBoardState.value?.orientation;
+    const isOurTurn = turnColor === myColor;
+    const dests = isOurTurn ? chessIdxToSqr(api.value.allDests()) : new Map();
+    const check = api.value.isCheck();
     const currentSetup = api.value.toSetup();
 
     mainBoardState.value = {
@@ -100,7 +100,7 @@ export const useGameStore = defineStore('game', () => {
       fen: makeFen(currentSetup),
       turnColor,
       movable: {
-        color: turnColor, // FIXME: am i need this when enemy moves?
+        color: isOurTurn ? myColor : undefined,
         dests,
       },
       check,
@@ -138,21 +138,21 @@ export const useGameStore = defineStore('game', () => {
 
     const { from, to } = promotionMoveCache.value;
     const uci = makeUci({ from, to, promotion });
-    const moverColor = api.value.turn;
 
     ws.sendMessage({ type: WsMsgType.GAME_MOVE, data: { idx: myBoardIdx.value, move: uci } });
 
     const capturedRole = detectCapture({ from, to, promotion });
     if (capturedRole && matePockets.value) matePockets.value.partner[capturedRole]++;
     playNormal({ from, to, promotion });
+    pendingOpponentMove.value = null;
     updateBoardState([chessIdxToSqr(from), chessIdxToSqr(to)]);
 
     promotionMoveCache.value = null;
     isPromoting.value = false;
-    toggleMainClock(moverColor);
+    toggleClock('main');
   };
 
-  const move = (orig: Key, dest: Key, meta: MoveMetadata) => {
+  const move = (orig: Key, dest: Key) => {
     if (!api.value) return;
 
     const from = parseSquare(orig),
@@ -167,15 +167,15 @@ export const useGameStore = defineStore('game', () => {
       return;
     }
 
-    const moverColor = api.value.turn;
     const uci = makeUci({ from, to });
     ws.sendMessage({ type: WsMsgType.GAME_MOVE, data: { idx: myBoardIdx.value, move: uci } });
 
     const capturedRole = detectCapture({ from, to });
     if (capturedRole && matePockets.value) matePockets.value.partner[capturedRole]++;
     playNormal({ from, to });
+    pendingOpponentMove.value = null;
     updateBoardState([orig, dest]);
-    toggleMainClock(moverColor); // FIXME: why we dont have auto toggle in useChessClocks?
+    toggleClock('main');
   };
 
   const drop = (role: Role, to: Key) => {
@@ -195,8 +195,9 @@ export const useGameStore = defineStore('game', () => {
     api.value.play({ role, to: toSq });
     if (mainPockets.value) mainPockets.value[moverColor][role as Exclude<Role, 'king'>]--;
 
+    pendingOpponentMove.value = null;
     updateBoardState([to]);
-    toggleMainClock(moverColor);
+    toggleClock('main');
   };
 
   const moveOpponent = (uci: string) => {
@@ -215,15 +216,17 @@ export const useGameStore = defineStore('game', () => {
       const capturedRole = detectCapture(parsed);
       if (capturedRole && matePockets.value) matePockets.value.opponent[capturedRole]++;
       playNormal(parsed);
+      pendingOpponentMove.value = [chessIdxToSqr(parsed.from), chessIdxToSqr(parsed.to)];
       updateBoardState([chessIdxToSqr(parsed.from), chessIdxToSqr(parsed.to)]);
     } else {
       // Drop: chessops correctly decrements the opponent's pocket (initialized from cfg teams).
       api.value.play(parsed);
       if (mainPockets.value) mainPockets.value[moverColor][parsed.role as Exclude<Role, 'king'>]--;
+      pendingOpponentMove.value = null;
       updateBoardState([chessIdxToSqr(parsed.to)]);
     }
 
-    toggleMainClock(moverColor);
+    toggleClock('main');
   };
 
   /** Route an incoming move to the correct board handler. */
@@ -267,10 +270,8 @@ export const useGameStore = defineStore('game', () => {
 
   const onGameEnd = (data: WsGameEndData) => {
     gameStatus.value = data.status;
-    stopClock('mainBoardW');
-    stopClock('mainBoardB');
-    stopClock('mateBoardW');
-    stopClock('mateBoardB');
+    pendingOpponentMove.value = null;
+    clearClocks();
     if (mainBoardState.value) {
       mainBoardState.value = {
         ...mainBoardState.value,
@@ -283,24 +284,6 @@ export const useGameStore = defineStore('game', () => {
     if (!uci) return undefined;
     if (uci.includes('@')) return [uci.slice(uci.indexOf('@') + 1) as Key];
     return [uci.slice(0, 2) as Key, uci.slice(2, 4) as Key];
-  };
-
-  const clear = () => {
-    api.value = null;
-    mainBoardState.value = undefined;
-    mateBoardState.value = undefined;
-    isPromoting.value = false;
-    promotionMoveCache.value = null;
-    chatMessages.value = [];
-    mainPockets.value = null;
-    matePockets.value = null;
-    players.value = null;
-    myBoardIdx.value = 0;
-    gameStatus.value = null;
-    stopClock('mainBoardW');
-    stopClock('mainBoardB');
-    stopClock('mateBoardW');
-    stopClock('mateBoardB');
   };
 
   /**
@@ -379,43 +362,44 @@ export const useGameStore = defineStore('game', () => {
 
     // Parse the FEN and set up the game.
     const parsedMateFen = parseFen(mateBoard.fen);
-    const mainTurn = isGameStarted(fenSetup) ? fenSetup.turn : null;
-    const mateTurn =
+    const mainTurnColor = isGameStarted(fenSetup) ? fenSetup.turn : null;
+    const mateTurnColor =
       parsedMateFen.isOk && isGameStarted(parsedMateFen.value) ? parsedMateFen.value.turn : null;
 
     // Compensate for time elapsed since the server snapshot was taken (network latency).
     const elapsed = Math.max(0, Date.now() - data.timestamp);
 
     resetClock(
-      'mainBoardW',
-      Math.max(0, myBoard.players[0].clock - (mainTurn === 'white' ? elapsed : 0)),
+      'mainWhite',
+      Math.max(0, myBoard.players[0].clock - (mainTurnColor === 'white' ? elapsed : 0)),
     );
     resetClock(
-      'mainBoardB',
-      Math.max(0, myBoard.players[1].clock - (mainTurn === 'black' ? elapsed : 0)),
+      'mainBlack',
+      Math.max(0, myBoard.players[1].clock - (mainTurnColor === 'black' ? elapsed : 0)),
     );
     resetClock(
-      'mateBoardW',
-      Math.max(0, mateBoard.players[0].clock - (mateTurn === 'white' ? elapsed : 0)),
+      'mateWhite',
+      Math.max(0, mateBoard.players[0].clock - (mateTurnColor === 'white' ? elapsed : 0)),
     );
     resetClock(
-      'mateBoardB',
-      Math.max(0, mateBoard.players[1].clock - (mateTurn === 'black' ? elapsed : 0)),
+      'mateBlack',
+      Math.max(0, mateBoard.players[1].clock - (mateTurnColor === 'black' ? elapsed : 0)),
     );
 
-    if (mainTurn) startClock(colorToClockId(mainTurn, 'main'));
-    if (mateTurn) startClock(colorToClockId(mateTurn, 'mate'));
+    if (mainTurnColor) startClock(colorToClockId(mainTurnColor, 'main'));
+    if (mateTurnColor) startClock(colorToClockId(mateTurnColor, 'mate'));
 
-    const dests = chessIdxToSqr(api.value.allDests());
-    const check = api.value.isCheck();
     const turnColor = api.value.turn;
+    const isOurTurn = turnColor === myColor;
+    const dests = isOurTurn ? chessIdxToSqr(api.value.allDests()) : new Map();
+    const check = api.value.isCheck();
 
     mainBoardState.value = {
       fen: myBoard.fen,
       orientation: myColor,
       turnColor,
       movable: {
-        color: turnColor,
+        color: isOurTurn ? myColor : undefined,
         dests,
         events: {
           after: move,
@@ -437,6 +421,22 @@ export const useGameStore = defineStore('game', () => {
     };
   };
 
+  const clear = () => {
+    api.value = null;
+    mainBoardState.value = undefined;
+    mateBoardState.value = undefined;
+    isPromoting.value = false;
+    promotionMoveCache.value = null;
+    chatMessages.value = [];
+    mainPockets.value = null;
+    matePockets.value = null;
+    players.value = null;
+    myBoardIdx.value = 0;
+    gameStatus.value = null;
+    pendingOpponentMove.value = null;
+    clearClocks();
+  };
+
   return {
     api,
     clocks,
@@ -453,6 +453,7 @@ export const useGameStore = defineStore('game', () => {
     partnerClockId,
     enemyClockId,
     chatMessages,
+    pendingOpponentMove,
     setup,
     clear,
     promote,
