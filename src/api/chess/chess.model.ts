@@ -1,31 +1,40 @@
-import type { Key } from '@lichess-org/chessground/types';
+import type { Color, Key } from '@lichess-org/chessground/types';
 
-export type PocketData = {
-  pawn: number;
-  knight: number;
-  bishop: number;
-  rook: number;
-  queen: number;
+/** Piece type that can be held in a pocket (all pieces except the King). Keys match the Role type from chessops/types. */
+export type ChessPiece = 'pawn' | 'knight' | 'bishop' | 'rook' | 'queen';
+
+/** Number of each piece type currently available for a drop move. */
+export type PocketData = Record<ChessPiece, number>;
+
+/** State of one player on a board: identity, clock, and pocket. */
+export type PlayerData = {
+  name: string;
+  rating: number;
+  color: Color;
+  /** Remaining clock time in milliseconds. */
+  clock: number;
+  pocket: PocketData;
 };
 
-export type BughousePockets = {
-  /** player's own pieces available to drop */
-  my: PocketData;
-  /** opponent's pieces available to drop (same board) */
-  opp: PocketData;
-  /** partner's pieces available to drop (mate board display) */
-  mate: PocketData;
-};
-
-export type BughouseConfig = {
-  /** main board position */
+/** Complete snapshot of one of the two Bughouse boards. */
+export type BoardData = {
+  /** FEN string representing the current position. */
   fen: string;
-  /** partner board position */
-  mFen: string;
-  /** last move as [from, to] squares */
-  lm?: Key[];
-  /** board orientation for this player */
-  orn: 'white' | 'black';
-  /** pocket state for all three sides */
-  p: BughousePockets;
+  /** `[white player, black player]`. */
+  players: [PlayerData, PlayerData];
+  /** Squares of the last move — two squares normally, one square for a drop; null at game start. */
+  lastMove: [Key, Key] | [Key] | null;
+};
+
+/** Identity and rating of a participant shown in the UI. */
+export type PlayerInfo = { username: string; rating: number };
+
+/** Full game state for both Bughouse boards, sent on join and sync. */
+export type BughouseData = {
+  /** `[board A, board B]`. */
+  boards: [BoardData, BoardData];
+  /** `null` while the game is in progress. */
+  status: 'WinA' | 'WinB' | 'Draw' | 'Abort' | null;
+  /** UTC timestamp of the last server update, in milliseconds. */
+  timestamp: number;
 };

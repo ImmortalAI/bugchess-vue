@@ -46,7 +46,12 @@ const handleSave = () => {
             <div class="flex flex-col gap-4">
               <div class="flex flex-col gap-2">
                 <Label for="settings-username">{{ t('authPage.formUsername') }}</Label>
-                <Input id="settings-username" type="text" autocomplete="username" v-model.trim="username" />
+                <Input
+                  id="settings-username"
+                  type="text"
+                  autocomplete="username"
+                  v-model.trim="username"
+                />
               </div>
               <div class="flex flex-col gap-2">
                 <Label for="settings-email">{{ t('authPage.formEmail') }}</Label>
@@ -65,28 +70,43 @@ const handleSave = () => {
             <div class="flex flex-col gap-4">
               <div class="flex flex-col gap-2">
                 <Label for="settings-current-password">{{ t('settings.currentPassword') }}</Label>
-                <Input id="settings-current-password" type="password" autocomplete="current-password"
-                  v-model="currentPassword" />
+                <Input
+                  id="settings-current-password"
+                  type="password"
+                  autocomplete="current-password"
+                  v-model="currentPassword"
+                />
               </div>
               <div class="flex flex-col gap-2">
                 <Label for="settings-new-password">{{ t('settings.newPassword') }}</Label>
-                <Input id="settings-new-password" type="password" autocomplete="new-password" v-model="newPassword" />
+                <Input
+                  id="settings-new-password"
+                  type="password"
+                  autocomplete="new-password"
+                  v-model="newPassword"
+                />
               </div>
               <div class="flex flex-col gap-2">
-                <Label for="settings-repeat-password">{{
-                  t('authPage.formPasswordRepeat')
-                  }}</Label>
-                <Input id="settings-repeat-password" type="password" autocomplete="new-password"
-                  v-model="repeatPassword" />
+                <Label for="settings-repeat-password">{{ t('authPage.formPasswordRepeat') }}</Label>
+                <Input
+                  id="settings-repeat-password"
+                  type="password"
+                  autocomplete="new-password"
+                  v-model="repeatPassword"
+                />
               </div>
             </div>
           </section>
         </CardContent>
 
-        <Transition enter-active-class="transition-all duration-200 ease-out"
-          enter-from-class="opacity-0 -translate-y-2" enter-to-class="opacity-100 translate-y-0"
-          leave-active-class="transition-all duration-150 ease-in" leave-from-class="opacity-100 translate-y-0"
-          leave-to-class="opacity-0 -translate-y-2">
+        <Transition
+          enter-active-class="transition-all duration-200 ease-out"
+          enter-from-class="opacity-0 -translate-y-2"
+          enter-to-class="opacity-100 translate-y-0"
+          leave-active-class="transition-all duration-150 ease-in"
+          leave-from-class="opacity-100 translate-y-0"
+          leave-to-class="opacity-0 -translate-y-2"
+        >
           <CardFooter v-if="canSave" class="border-t">
             <Button type="submit" class="w-full">{{ t('settings.save') }}</Button>
           </CardFooter>

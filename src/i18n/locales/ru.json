@@ -46,11 +46,16 @@
     "kickConfirm": "Исключить игрока?",
     "kickConfirmYes": "Исключить",
     "kickConfirmNo": "Отмена",
-    "myTeam": "Моя команда",
-    "enemyTeam": "Команда противника",
+    "team1": "Команда 1",
+    "team2": "Команда 2",
+    "leave": "Выйти",
+    "leaveConfirm": "Точно выйти?",
     "rating": "Рейтинговая игра",
     "startGame": "Начать поиск игры",
-    "cancelSearch": "Отменить поиск"
+    "cancelSearch": "Отменить поиск",
+    "inviteDialogTitle": "Пригласить игрока",
+    "inviteInputLabel": "Имя пользователя",
+    "inviteInputPlaceholder": "Введите ник..."
   },
   "serverUnavailable": {
     "title": "Сервер недоступен",

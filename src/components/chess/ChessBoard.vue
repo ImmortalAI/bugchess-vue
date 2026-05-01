@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue';
 import { ChessError } from '@/utils/chessError';
 import ChessPromotion from '@/components/chess/ChessPromotion.vue';
 import { cn } from '@/lib/utils';
@@ -22,6 +22,10 @@ interface ChessBoardProps {
   pocketsInteractive?: boolean;
   pocketsOrientation?: 'vertical' | 'horizontal';
   resizable?: boolean;
+  /** Pieces available to the player at the bottom of the board. */
+  pockets?: PocketData;
+  /** Pieces available to the player at the top of the board. */
+  pocketsOpponent?: PocketData;
 }
 
 const props = defineProps<ChessBoardProps>();
@@ -59,9 +63,12 @@ const onPocketPieceMousedown = (
   api.value.dragNewPiece({ role: piece, color }, e);
 };
 
-// TODO: replace with store data
-const testPockets: PocketData = { pawn: 1, knight: 1, bishop: 1, rook: 3, queen: 1 };
-const testPocketsOpponent: PocketData = { pawn: 2, knight: 1, bishop: 1, rook: 1, queen: 1 };
+const emptyPocket: PocketData = { pawn: 0, knight: 0, bishop: 0, rook: 0, queen: 0 };
+
+// The "bottom" player's color matches the board orientation.
+const pocketsColor = computed<Color>(() =>
+  props.config?.orientation === 'black' ? 'black' : 'white',
+);
 </script>
 
 <template>
@@ -77,9 +84,9 @@ const testPocketsOpponent: PocketData = { pawn: 2, knight: 1, bishop: 1, rook: 1
     </div>
     <ChessPockets
       :class="props.classPockets"
-      color="white"
-      :data="testPockets"
-      :data-opponent="testPocketsOpponent"
+      :color="pocketsColor"
+      :data="pockets ?? emptyPocket"
+      :data-opponent="pocketsOpponent"
       :interactive="pocketsInteractive"
       @piece-mousedown="onPocketPieceMousedown"
     />
@@ -91,7 +98,11 @@ const testPocketsOpponent: PocketData = { pawn: 2, knight: 1, bishop: 1, rook: 1
     :class="cn('flex flex-col gap-1', props.class)"
   >
     <div :class="cn('flex justify-between items-center gap-2', props.classPocketRow)">
-      <ChessPockets orientation="horizontal" color="black" :data="testPocketsOpponent" />
+      <ChessPockets
+        orientation="horizontal"
+        :color="pocketsColor === 'white' ? 'black' : 'white'"
+        :data="pocketsOpponent ?? emptyPocket"
+      />
       <slot name="pocket-top-extra" />
     </div>
     <div :class="cn('relative w-full', props.classContainer)">
@@ -102,8 +113,8 @@ const testPocketsOpponent: PocketData = { pawn: 2, knight: 1, bishop: 1, rook: 1
       <ChessPockets
         orientation="horizontal"
         :class="props.classPockets"
-        color="white"
-        :data="testPockets"
+        :color="pocketsColor"
+        :data="pockets ?? emptyPocket"
         :interactive="pocketsInteractive"
         @piece-mousedown="onPocketPieceMousedown"
       />

@@ -1,7 +1,8 @@
 import type { Key } from '@lichess-org/chessground/types';
 import { SquareSet } from 'chessops/squareSet';
-import type { Square } from 'chessops/types';
+import type { Color, Square } from 'chessops/types';
 import { makeSquare, parseSquare } from 'chessops/util';
+import type { ClockId } from '@/composables/useChessClocks';
 import { ChessError } from './chessError';
 
 export function chessIdxToSqr(indexes: Square): Key;
@@ -45,3 +46,15 @@ export function chessSqrToIdx(squares: Key | Map<Key, Key[]>): Square | Map<Squa
 
 export const isFLLine = (color: 'white' | 'black', to: Key) =>
   (color === 'white' && to[1] === '8') || (color === 'black' && to[1] === '1');
+
+export const colorToClockId = (color: Color, board: 'main' | 'mate'): ClockId =>
+  board === 'main'
+    ? color === 'white'
+      ? 'mainBoardW'
+      : 'mainBoardB'
+    : color === 'white'
+      ? 'mateBoardW'
+      : 'mateBoardB';
+
+export const isGameStarted = (setup: { fullmoves: number; turn: Color }) =>
+  setup.fullmoves > 1 || (setup.fullmoves === 1 && setup.turn === 'black');

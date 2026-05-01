@@ -130,5 +130,9 @@ export function useChessClocks() {
     }
   });
 
-  return { clocks, start, stop, reset, resetAll };
+  function sync(id: ClockId, ms: number) {
+    clocks[id].remainingMs = ms;
+  }
+
+  return { clocks, start, stop, reset, resetAll, sync };
 }

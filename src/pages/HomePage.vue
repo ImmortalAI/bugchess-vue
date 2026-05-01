@@ -5,6 +5,7 @@ import TileButton from '@/components/common/TileButton.vue';
 import Button from '@/components/ui/button/Button.vue';
 import { useTranslation } from '@/composables/useTranslation';
 import { useAuthStore } from '@/stores/auth';
+import { useLobbyStore } from '@/stores/lobby';
 import { useSessionStore } from '@/stores/session';
 import { useWebSocketStore } from '@/stores/ws';
 import { quickGameOptions, type QuickGameOption } from '@/utils/quickGameOptions';
@@ -14,6 +15,7 @@ import { useRouter } from 'vue-router';
 const { t } = useTranslation();
 
 const auth = useAuthStore();
+const lobby = useLobbyStore();
 const session = useSessionStore();
 const ws = useWebSocketStore();
 const router = useRouter();
@@ -22,12 +24,12 @@ const inviteVisible = computed(() => session.pendingInvite !== null);
 const inviterUsername = computed(() => session.pendingInvite ?? '');
 
 const onInviteAccept = () => {
-  ws.sendMessage({ type: WsMsgType.INVITE_ACCEPT, data: {} });
+  ws.sendMessage({ type: WsMsgType.INVITE_ACCEPT, data: session.pendingInvite! });
   session.setPendingInvite(null);
 };
 
 const onInviteDecline = () => {
-  ws.sendMessage({ type: WsMsgType.INVITE_REJECT, data: {} });
+  ws.sendMessage({ type: WsMsgType.INVITE_REJECT, data: session.pendingInvite! });
   session.setPendingInvite(null);
 };
 
@@ -45,13 +47,17 @@ const createLobby = (option: QuickGameOption) => {
   const time = minutesPart ?? 3;
   const increment = incrementPart ?? 0;
 
-  session.setLobbyOptimistic(
-    { userId: auth.user!.id, username: auth.user!.username, rating: auth.user!.rating },
+  lobby.setOptimistic(
+    { username: auth.user!.username, rating: auth.user!.rating },
     time,
     increment,
   );
+  session.setLobby();
 
-  ws.sendMessage({ type: WsMsgType.LOBBY_CREATE, data: { m: time, s: increment } });
+  ws.sendMessage({
+    type: WsMsgType.LOBBY_CREATE,
+    data: { initMs: time * 60000, incrMs: increment * 1000 },
+  });
 
   router.push('/lobby');
 };

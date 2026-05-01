@@ -4,34 +4,14 @@ import { computed, shallowRef } from 'vue';
 import { toast } from 'vue-sonner';
 import { useGameStore } from './game';
 import { useSessionStore } from './session';
+import { useLobbyStore } from './lobby';
 import {
   WsMsgType,
   type WsIncomingData,
   type WsOutgoingData,
-  type WsSeatData,
-  type WsLobbyStateData,
 } from '@/api/websocket/websocket.model';
-import type { LobbyState, LobbyPlayerSlot, LobbyTeam } from '@/api/lobby/lobby.model';
 import { makeWsUrl } from '@/utils/wsUrl';
-
-const mapSeat = (s: WsSeatData | null): LobbyPlayerSlot =>
-  s ? { username: s.n, rating: s.r } : null;
-
-const mapLobbyState = (d: WsLobbyStateData): LobbyState => {
-  const onTeamB = d.p !== null && d.p >= 2;
-  return {
-    time: d.t.m,
-    increment: d.t.s,
-    rated: d.r,
-    inQueue: d.q,
-    myTeam: (onTeamB
-      ? [mapSeat(d.s[2]), mapSeat(d.s[3])]
-      : [mapSeat(d.s[0]), mapSeat(d.s[1])]) as LobbyTeam,
-    enemyTeam: (onTeamB
-      ? [mapSeat(d.s[0]), mapSeat(d.s[1])]
-      : [mapSeat(d.s[2]), mapSeat(d.s[3])]) as LobbyTeam,
-  };
-};
+import router from '@/router';
 
 export const useWebSocketStore = defineStore('websocket', () => {
   const instance = shallowRef<ReturnType<typeof useWebSocket<WsIncomingData>> | null>(null);
@@ -40,6 +20,8 @@ export const useWebSocketStore = defineStore('websocket', () => {
 
   const game = useGameStore();
   const session = useSessionStore();
+  const lobby = useLobbyStore();
+
   const connect = () => {
     if (instance.value) {
       if (instance.value.status.value !== 'CLOSED') return;
@@ -92,46 +74,75 @@ export const useWebSocketStore = defineStore('websocket', () => {
       // BASE
       case WsMsgType.PONG:
         break;
+      case WsMsgType.SYNC: {
+        const { state, lobby: lobbySnap, game: gameSnap } = data.data;
+        session.setState(state);
+        lobby.setState(lobbySnap);
+        game.setup(gameSnap);
+        break;
+      }
 
       // LOBBY SERVER
       case WsMsgType.LOBBY_JOIN:
-        session.setLobby(mapLobbyState(data.data));
+        session.setLobby();
+        lobby.setState(data.data);
         break;
       case WsMsgType.LOBBY_KICKED:
         session.setIdle();
+        lobby.clear();
         break;
       case WsMsgType.INVITE_RECEIVE:
-        session.setPendingInvite(data.data.n);
+        session.setPendingInvite(data.data.username);
+        break;
+      case WsMsgType.LOBBY_INVITE_REJECTED:
+        toast.info(`${data.data.username} declined your invite`);
         break;
       case WsMsgType.LOBBY_CONFIG_UPDATE:
-        session.updateLobbySettings({
-          time: data.data.t.m,
-          increment: data.data.t.s,
-          rated: data.data.r,
-        });
+        lobby.updateSettings(data.data);
         break;
       case WsMsgType.LOBBY_START_MM:
-        session.setMatchmaking(true);
+        lobby.setMatchmaking(true);
         break;
       case WsMsgType.LOBBY_CANCEL_MM:
-        session.setMatchmaking(false);
+        lobby.setMatchmaking(false);
         break;
+      case WsMsgType.LOBBY_PLAYER_JOIN:
+        lobby.updateSlot(data.data);
+        break;
+      case WsMsgType.LOBBY_PLAYER_LEAVE: {
+        const { idx, reason } = data.data;
+        const team = idx < 2 ? lobby.teamA : lobby.teamB;
+        const username = team?.[(idx % 2) as 0 | 1]?.username ?? 'A player';
+        lobby.clearSlot(data.data);
+        toast.info(
+          reason === 'kick'
+            ? `${username} was kicked from the lobby`
+            : `${username} left the lobby`,
+        );
+        break;
+      }
 
       // GAME SERVER
       case WsMsgType.GAME_JOIN:
-        game.setup(data.data);
+        game.setup(data.data, true);
+        session.setGame();
+        if (router.currentRoute.value.name === 'Lobby') router.push('/match');
         break;
-      case WsMsgType.GAME_SYNC:
-        game.setup(data.data);
-        break;
-      case WsMsgType.GAME_OPPONENT_MOVE:
-        game.moveOpponent(data.data);
-        break;
-      case WsMsgType.GAME_MATE_BOARD_UPDATE:
-        game.mateMove(data.data);
+      case WsMsgType.GAME_MOVE_RECEIVE:
+        game.receiveMove(data.data);
         break;
       case WsMsgType.GAME_CHAT_MSG_RECEIVE:
-        game.addChatMessage('Opponent', data.data.m, false);
+        game.addChatMessage('Opponent', data.data, false);
+        break;
+      case WsMsgType.GAME_END:
+        game.onGameEnd(data.data);
+        break;
+
+      // ERROR
+      case WsMsgType.ERROR:
+        toast.error(data.data.message ?? 'Server error');
+        router.push('/');
+        sendMessage({ type: WsMsgType.REQ_SYNC, data: {} });
         break;
     }
   };

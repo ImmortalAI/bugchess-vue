@@ -8,6 +8,8 @@ const { t } = useTranslation();
 const minutes = defineModel<number>('minutes', { required: true });
 const seconds = defineModel<number>('seconds', { required: true });
 
+const props = defineProps<{ disabled?: boolean }>();
+
 const minutesArray = computed({
   get() {
     return [minutes.value];
@@ -37,9 +39,8 @@ const secondsArray = computed({
           >{{ minutes }}</span
         >
       </div>
-      <Slider v-model="minutesArray" :min="0" :max="180" :step="1" />
+      <Slider v-model="minutesArray" :min="0" :max="180" :step="1" :disabled="props.disabled" />
     </div>
-    <span class="hidden sm:block sm:mb-auto sm:align-top">+</span>
     <div class="flex flex-col gap-2 w-full sm:w-xs">
       <div class="flex justify-between">
         <span>{{ t('chessClockSlider.textSeconds') }}</span
@@ -48,7 +49,7 @@ const secondsArray = computed({
           >{{ seconds }}</span
         >
       </div>
-      <Slider v-model="secondsArray" :min="0" :max="59" :step="1" />
+      <Slider v-model="secondsArray" :min="0" :max="59" :step="1" :disabled="props.disabled" />
     </div>
   </div>
 </template>

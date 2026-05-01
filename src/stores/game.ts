@@ -1,22 +1,29 @@
+import { useChessClocks, type ClockId } from '@/composables/useChessClocks';
 import { ChessError } from '@/utils/chessError';
-import { chessIdxToSqr, isFLLine } from '@/utils/chessOpsGroundUtils';
+import {
+  chessIdxToSqr,
+  colorToClockId,
+  isFLLine,
+  isGameStarted,
+} from '@/utils/chessOpsGroundUtils';
 import type { Config } from '@lichess-org/chessground/config';
 import type { Key, MoveMetadata } from '@lichess-org/chessground/types';
 import { makeFen, parseFen } from 'chessops/fen';
 import { Material } from 'chessops/setup';
 import { makeUci, parseUci } from 'chessops/util';
-import type { NormalMove, Role, Square } from 'chessops/types';
+import type { Color, NormalMove, Role, Square } from 'chessops/types';
 import { parseSquare } from 'chessops/util';
 import { Crazyhouse } from 'chessops/variant';
 import { defineStore } from 'pinia';
-import { ref, shallowRef } from 'vue';
+import { computed, ref, shallowRef } from 'vue';
 import {
   WsMsgType,
-  type WsMateMoveData,
-  type WsMoveUciData,
+  type WsGameMoveReceive,
+  type WsGameEndData,
 } from '@/api/websocket/websocket.model';
 import { useWebSocketStore } from './ws';
-import type { BughouseConfig, PocketData } from '@/api/chess/chess.model';
+import { useAuthStore } from './auth';
+import type { BughouseData, PlayerInfo, PocketData } from '@/api/chess/chess.model';
 import type { ChatMessage } from '@/components/common/ChatComponent/types';
 
 export const useGameStore = defineStore('game', () => {
@@ -29,11 +36,56 @@ export const useGameStore = defineStore('game', () => {
   const promotionMoveCache = ref<{ from: Square; to: Square } | null>(null);
   const chatMessages = ref<ChatMessage[]>([]);
 
+  // Pockets on the main board — tracked separately for Vue reactivity
+  // (chessops mutates them in-place which shallowRef won't detect).
+  const mainPockets = ref<{ white: PocketData; black: PocketData } | null>(null);
+
   // Pockets of both players on the mate (partner's) board.
   // partner = pieces the partner can drop; opponent = pieces the partner's opponent can drop.
-  const matePockets = shallowRef<{ partner: PocketData; opponent: PocketData } | null>(null);
+  const matePockets = ref<{ partner: PocketData; opponent: PocketData } | null>(null);
+
+  // Display info for all four participants.
+  const players = ref<{
+    me: PlayerInfo;
+    partner: PlayerInfo;
+    opponent: PlayerInfo;
+    enemy: PlayerInfo;
+  } | null>(null);
+
+  /** Which board index (0 or 1) the local player is playing on. */
+  const myBoardIdx = ref<0 | 1>(0);
+
+  /** Game result; null while the game is in progress. */
+  const gameStatus = ref<BughouseData['status']>(null);
 
   const ws = useWebSocketStore();
+  const {
+    clocks,
+    start: startClock,
+    stop: stopClock,
+    reset: resetClock,
+    sync: syncClock,
+  } = useChessClocks();
+
+  // Clock IDs derived from the current player's board orientation.
+  const myClockId = computed<ClockId>(() =>
+    mainBoardState.value?.orientation === 'white' ? 'mainBoardW' : 'mainBoardB',
+  );
+  const opponentClockId = computed<ClockId>(() =>
+    myClockId.value === 'mainBoardW' ? 'mainBoardB' : 'mainBoardW',
+  );
+  // Standard Bughouse: if I'm white on main, my partner is black on mate (and vice versa).
+  const partnerClockId = computed<ClockId>(() =>
+    myClockId.value === 'mainBoardW' ? 'mateBoardB' : 'mateBoardW',
+  );
+  const enemyClockId = computed<ClockId>(() =>
+    myClockId.value === 'mainBoardW' ? 'mateBoardW' : 'mateBoardB',
+  );
+
+  const toggleMainClock = (movedColor: Color) => {
+    stopClock(colorToClockId(movedColor, 'main'));
+    startClock(colorToClockId(movedColor === 'white' ? 'black' : 'white', 'main'));
+  };
 
   const updateBoardState = (lastMove?: Key[]) => {
     if (!api.value) return;
@@ -48,7 +100,7 @@ export const useGameStore = defineStore('game', () => {
       fen: makeFen(currentSetup),
       turnColor,
       movable: {
-        color: turnColor,
+        color: turnColor, // FIXME: am i need this when enemy moves?
         dests,
       },
       check,
@@ -86,8 +138,9 @@ export const useGameStore = defineStore('game', () => {
 
     const { from, to } = promotionMoveCache.value;
     const uci = makeUci({ from, to, promotion });
+    const moverColor = api.value.turn;
 
-    ws.sendMessage({ type: WsMsgType.GAME_MOVE, data: uci });
+    ws.sendMessage({ type: WsMsgType.GAME_MOVE, data: { idx: myBoardIdx.value, move: uci } });
 
     const capturedRole = detectCapture({ from, to, promotion });
     if (capturedRole && matePockets.value) matePockets.value.partner[capturedRole]++;
@@ -96,12 +149,11 @@ export const useGameStore = defineStore('game', () => {
 
     promotionMoveCache.value = null;
     isPromoting.value = false;
+    toggleMainClock(moverColor);
   };
 
   const move = (orig: Key, dest: Key, meta: MoveMetadata) => {
     if (!api.value) return;
-
-    if (meta.premove) return;
 
     const from = parseSquare(orig),
       to = parseSquare(dest);
@@ -115,13 +167,15 @@ export const useGameStore = defineStore('game', () => {
       return;
     }
 
+    const moverColor = api.value.turn;
     const uci = makeUci({ from, to });
-    ws.sendMessage({ type: WsMsgType.GAME_MOVE, data: uci });
+    ws.sendMessage({ type: WsMsgType.GAME_MOVE, data: { idx: myBoardIdx.value, move: uci } });
 
     const capturedRole = detectCapture({ from, to });
     if (capturedRole && matePockets.value) matePockets.value.partner[capturedRole]++;
     playNormal({ from, to });
     updateBoardState([orig, dest]);
+    toggleMainClock(moverColor); // FIXME: why we dont have auto toggle in useChessClocks?
   };
 
   const drop = (role: Role, to: Key) => {
@@ -132,19 +186,28 @@ export const useGameStore = defineStore('game', () => {
       throw new ChessError('Invalid drop target: ' + to);
     }
 
-    ws.sendMessage({ type: WsMsgType.GAME_MOVE, data: makeUci({ role, to: toSq }) });
+    const moverColor = api.value.turn;
+    ws.sendMessage({
+      type: WsMsgType.GAME_MOVE,
+      data: { idx: myBoardIdx.value, move: makeUci({ role, to: toSq }) },
+    });
 
     api.value.play({ role, to: toSq });
+    if (mainPockets.value) mainPockets.value[moverColor][role as Exclude<Role, 'king'>]--;
+
     updateBoardState([to]);
+    toggleMainClock(moverColor);
   };
 
-  const moveOpponent = (uci: WsMoveUciData) => {
+  const moveOpponent = (uci: string) => {
     if (!api.value) return;
 
     const parsed = parseUci(uci);
     if (!parsed) {
       throw new ChessError('Invalid opponent move UCI: ' + uci);
     }
+
+    const moverColor = api.value.turn;
 
     if ('from' in parsed) {
       // Normal move: captures must not go to this board's pockets in Bughouse.
@@ -154,28 +217,38 @@ export const useGameStore = defineStore('game', () => {
       playNormal(parsed);
       updateBoardState([chessIdxToSqr(parsed.from), chessIdxToSqr(parsed.to)]);
     } else {
-      // Drop: chessops correctly decrements the opponent's pocket (initialized from cfg.p.opp)
+      // Drop: chessops correctly decrements the opponent's pocket (initialized from cfg teams).
       api.value.play(parsed);
+      if (mainPockets.value) mainPockets.value[moverColor][parsed.role as Exclude<Role, 'king'>]--;
       updateBoardState([chessIdxToSqr(parsed.to)]);
     }
+
+    toggleMainClock(moverColor);
   };
 
-  const mateMove = (data: WsMateMoveData) => {
-    if (!mateBoardState.value) return;
-
-    mateBoardState.value = {
-      ...mateBoardState.value,
-      fen: data.fen,
-      lastMove: data.lm,
-    };
-
-    if (data.pd && api.value?.pockets) {
-      api.value.pockets[data.pd.c][data.pd.r]++;
-      updateBoardState();
-    }
-
-    if (data.mpd && matePockets.value) {
-      matePockets.value[data.mpd.s][data.mpd.r]--;
+  /** Route an incoming move to the correct board handler. */
+  const receiveMove = (data: WsGameMoveReceive) => {
+    if (data.idx === myBoardIdx.value) {
+      moveOpponent(data.move);
+      // After moveOpponent, api.value.turn is the color now to move (clock running).
+      const elapsed = Math.max(0, Date.now() - data.timestamp);
+      const nowActive = api.value!.turn;
+      syncClock(
+        colorToClockId('white', 'main'),
+        Math.max(0, data.white - (nowActive === 'white' ? elapsed : 0)),
+      );
+      syncClock(
+        colorToClockId('black', 'main'),
+        Math.max(0, data.black - (nowActive === 'black' ? elapsed : 0)),
+      );
+    } else {
+      // Mate board: update lastMove display only (full pocket sync deferred).
+      if (mateBoardState.value) {
+        mateBoardState.value = {
+          ...mateBoardState.value,
+          lastMove: parseLastMove(data.move) ?? undefined,
+        };
+      }
     }
   };
 
@@ -184,38 +257,162 @@ export const useGameStore = defineStore('game', () => {
   };
 
   const sendChatMessage = (text: string, senderName: string) => {
-    ws.sendMessage({ type: WsMsgType.GAME_CHAT_MSG_SEND, data: { m: text } });
+    ws.sendMessage({ type: WsMsgType.GAME_CHAT_MSG_SEND, data: text });
     addChatMessage(senderName, text, true);
   };
 
-  const setup = (cfg: BughouseConfig) => {
+  const resign = () => {
+    ws.sendMessage({ type: WsMsgType.GAME_RESIGN, data: {} });
+  };
+
+  const onGameEnd = (data: WsGameEndData) => {
+    gameStatus.value = data.status;
+    stopClock('mainBoardW');
+    stopClock('mainBoardB');
+    stopClock('mateBoardW');
+    stopClock('mateBoardB');
+    if (mainBoardState.value) {
+      mainBoardState.value = {
+        ...mainBoardState.value,
+        movable: { color: undefined, dests: new Map() },
+      };
+    }
+  };
+
+  const parseLastMove = (uci: string): Key[] | undefined => {
+    if (!uci) return undefined;
+    if (uci.includes('@')) return [uci.slice(uci.indexOf('@') + 1) as Key];
+    return [uci.slice(0, 2) as Key, uci.slice(2, 4) as Key];
+  };
+
+  const clear = () => {
+    api.value = null;
+    mainBoardState.value = undefined;
+    mateBoardState.value = undefined;
+    isPromoting.value = false;
+    promotionMoveCache.value = null;
     chatMessages.value = [];
-    const parsedFen = parseFen(cfg.fen);
-    if (parsedFen.isErr) {
-      throw new ChessError('Invalid FEN: ' + cfg.fen);
+    mainPockets.value = null;
+    matePockets.value = null;
+    players.value = null;
+    myBoardIdx.value = 0;
+    gameStatus.value = null;
+    stopClock('mainBoardW');
+    stopClock('mainBoardB');
+    stopClock('mateBoardW');
+    stopClock('mateBoardB');
+  };
+
+  /**
+   * Initialize (or re-initialize) the full game state from a server snapshot.
+   * Called on both fresh GAME_JOIN and SYNC while in a game.
+   */
+  const setup = (data: BughouseData | null, newGame?: boolean) => {
+    // Clear state if server returned null (game not started yet).
+    if (data === null) {
+      clear();
+      return;
     }
 
+    // On sync do not clear messages in chat
+    if (newGame) chatMessages.value = [];
+    gameStatus.value = null;
+
+    // Find this user's board and player slot indices.
+    const myUsername = useAuthStore().user?.username;
+    let b: 0 | 1 = 0;
+    let p: 0 | 1 = 0;
+
+    outer: for (const bi of [0, 1] as const) {
+      for (const pi of [0, 1] as const) {
+        if (data.boards[bi].players[pi].name === myUsername) {
+          b = bi;
+          p = pi;
+          break outer;
+        }
+      }
+    }
+
+    myBoardIdx.value = b;
+    const mateBoardIdxVal = (1 - b) as 0 | 1;
+
+    const myBoard = data.boards[b];
+    const mateBoard = data.boards[mateBoardIdxVal];
+
+    const me = myBoard.players[p];
+    const opponent = myBoard.players[(1 - p) as 0 | 1];
+    // In standard Bughouse, partner has the opposite color on the other board.
+    const partner = mateBoard.players[(1 - p) as 0 | 1];
+    const partnerEnemy = mateBoard.players[p];
+
+    const myColor: Color = me.color;
+    const opponentColor: Color = opponent.color;
+
+    players.value = {
+      me: { username: me.name, rating: me.rating },
+      partner: { username: partner.name, rating: partner.rating },
+      opponent: { username: opponent.name, rating: opponent.rating },
+      enemy: { username: partnerEnemy.name, rating: partnerEnemy.rating },
+    };
+
+    // Parse the FEN and set up the game.
+    const parsedFen = parseFen(myBoard.fen);
+    if (parsedFen.isErr) throw new ChessError('Invalid FEN: ' + myBoard.fen);
     const fenSetup = parsedFen.value;
-    // Inject the player's pocket from server config — pockets in Bughouse are
-    // managed cross-board and are not encoded in the position FEN.
+
     const pockets = Material.empty();
-    const opponentColor = cfg.orn === 'white' ? 'black' : 'white';
-    Object.assign(pockets[cfg.orn], cfg.p.my);
-    Object.assign(pockets[opponentColor], cfg.p.opp);
+    Object.assign(pockets[myColor], me.pocket);
+    Object.assign(pockets[opponentColor], opponent.pocket);
     fenSetup.pockets = pockets;
 
     api.value = Crazyhouse.fromSetup(fenSetup).unwrap();
 
-    const emptyPocket = (): PocketData => ({ pawn: 0, knight: 0, bishop: 0, rook: 0, queen: 0 });
-    matePockets.value = { partner: { ...cfg.p.mate }, opponent: emptyPocket() };
+    // Set up pockets for both boards.
+    mainPockets.value = {
+      white: { ...(myColor === 'white' ? me.pocket : opponent.pocket) },
+      black: { ...(myColor === 'black' ? me.pocket : opponent.pocket) },
+    };
+    matePockets.value = {
+      partner: { ...partner.pocket },
+      opponent: { ...partnerEnemy.pocket },
+    };
+
+    // Parse the FEN and set up the game.
+    const parsedMateFen = parseFen(mateBoard.fen);
+    const mainTurn = isGameStarted(fenSetup) ? fenSetup.turn : null;
+    const mateTurn =
+      parsedMateFen.isOk && isGameStarted(parsedMateFen.value) ? parsedMateFen.value.turn : null;
+
+    // Compensate for time elapsed since the server snapshot was taken (network latency).
+    const elapsed = Math.max(0, Date.now() - data.timestamp);
+
+    resetClock(
+      'mainBoardW',
+      Math.max(0, myBoard.players[0].clock - (mainTurn === 'white' ? elapsed : 0)),
+    );
+    resetClock(
+      'mainBoardB',
+      Math.max(0, myBoard.players[1].clock - (mainTurn === 'black' ? elapsed : 0)),
+    );
+    resetClock(
+      'mateBoardW',
+      Math.max(0, mateBoard.players[0].clock - (mateTurn === 'white' ? elapsed : 0)),
+    );
+    resetClock(
+      'mateBoardB',
+      Math.max(0, mateBoard.players[1].clock - (mateTurn === 'black' ? elapsed : 0)),
+    );
+
+    if (mainTurn) startClock(colorToClockId(mainTurn, 'main'));
+    if (mateTurn) startClock(colorToClockId(mateTurn, 'mate'));
 
     const dests = chessIdxToSqr(api.value.allDests());
     const check = api.value.isCheck();
     const turnColor = api.value.turn;
 
     mainBoardState.value = {
-      fen: cfg.fen,
-      orientation: cfg.orn,
+      fen: myBoard.fen,
+      orientation: myColor,
       turnColor,
       movable: {
         color: turnColor,
@@ -226,28 +423,45 @@ export const useGameStore = defineStore('game', () => {
         },
       },
       check,
+      lastMove: myBoard.lastMove ?? undefined,
     };
 
     mateBoardState.value = {
-      fen: cfg.mFen,
-      orientation: cfg.orn === 'white' ? 'black' : 'white',
-      viewOnly: true,
+      fen: mateBoard.fen,
+      orientation: opponentColor,
+      movable: {
+        free: false,
+        dests: new Map<Key, Key[]>(),
+      },
+      lastMove: mateBoard.lastMove ?? undefined,
     };
   };
 
   return {
     api,
+    clocks,
     isPromoting,
     mainBoardState,
     mateBoardState,
+    mainPockets,
     matePockets,
+    players,
+    myBoardIdx,
+    gameStatus,
+    myClockId,
+    opponentClockId,
+    partnerClockId,
+    enemyClockId,
     chatMessages,
     setup,
+    clear,
     promote,
     move,
     drop,
     moveOpponent,
-    mateMove,
+    receiveMove,
+    resign,
+    onGameEnd,
     addChatMessage,
     sendChatMessage,
   };

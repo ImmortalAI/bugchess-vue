@@ -8,6 +8,7 @@ import personImg from '@/assets/imgs/person.png';
 
 interface LobbyPlayerProps {
   username?: string;
+  canKick?: boolean;
 }
 
 const props = defineProps<LobbyPlayerProps>();
@@ -29,7 +30,7 @@ const avatarSrc = computed(() => {
 const onClick = () => {
   if (!props.username) {
     emit('invite');
-  } else {
+  } else if (props.canKick) {
     confirmingKick.value = true;
   }
 };

@@ -46,11 +46,16 @@
     "kickConfirm": "Remove player?",
     "kickConfirmYes": "Remove",
     "kickConfirmNo": "Cancel",
-    "myTeam": "My team",
-    "enemyTeam": "Enemy team",
+    "team1": "Team 1",
+    "team2": "Team 2",
+    "leave": "Leave",
+    "leaveConfirm": "Are you sure?",
     "rating": "Rating",
     "startGame": "Start Matchmaking",
-    "cancelSearch": "Cancel Search"
+    "cancelSearch": "Cancel Search",
+    "inviteDialogTitle": "Invite Player",
+    "inviteInputLabel": "Username",
+    "inviteInputPlaceholder": "Enter username..."
   },
   "serverUnavailable": {
     "title": "Server Unavailable",

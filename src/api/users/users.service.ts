@@ -1,12 +1,12 @@
 import apiClient from '@/utils/apiClient';
-import type { UserData, UserSearchResult } from './users.model';
+import type { UserData, UserSearchResults } from './users.model';
 
 export async function usersMe(): Promise<UserData> {
-  const response = await apiClient.get('/users/me');
+  const response = await apiClient.get<UserData>('/users/me');
   return response.data;
 }
 
-export async function searchUsers(query: string): Promise<UserSearchResult[]> {
-  const response = await apiClient.get('/users/search', { params: { q: query } });
+export async function usersActive(): Promise<UserSearchResults> {
+  const response = await apiClient.get<UserSearchResults>('/users/active');
   return response.data;
 }

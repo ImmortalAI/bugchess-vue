@@ -6,8 +6,4 @@ export type UserData = {
   sigma: number;
 };
 
-export type UserSearchResult = {
-  id: string;
-  username: string;
-  rating: number;
-};
+export type UserSearchResults = string[];
