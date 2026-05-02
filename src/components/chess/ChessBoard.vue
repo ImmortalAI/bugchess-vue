@@ -1,14 +1,15 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue';
+import { computed, onBeforeUnmount, onMounted, shallowRef } from 'vue';
 import { ChessError } from '@/utils/chessError';
 import ChessPromotion from '@/components/chess/ChessPromotion.vue';
 import { cn } from '@/lib/utils';
 import type { Config } from '@lichess-org/chessground/config';
-import type { Color, Key } from '@lichess-org/chessground/types';
+import type { Color, File } from '@lichess-org/chessground/types';
 import { Chessground } from '@lichess-org/chessground';
 import ChessPockets from './ChessPockets.vue';
 import type { PocketData } from '@/api/chess/chess.model';
 import ChessBoardResizer from './ChessBoardResizer.vue';
+import type { Role } from 'chessops/types';
 
 interface ChessBoardProps {
   class?: string;
@@ -19,6 +20,8 @@ interface ChessBoardProps {
   classPocketRow?: string;
   config?: Config;
   isPromoting: boolean;
+  promotionColor?: Color;
+  promotionFile?: File;
   pocketsInteractive?: boolean;
   pocketsOrientation?: 'vertical' | 'horizontal';
   resizable?: boolean;
@@ -26,13 +29,15 @@ interface ChessBoardProps {
   pockets?: PocketData;
   /** Pieces available to the player at the top of the board. */
   pocketsOpponent?: PocketData;
-  /** Opponent's last normal move to animate; null/undefined for full FEN reset. */
-  opponentMove?: [Key, Key] | null;
 }
 
 const props = defineProps<ChessBoardProps>();
+const emit = defineEmits<{
+  ready: [api: ReturnType<typeof Chessground>];
+  'promotion-select': [role: Exclude<Role, 'king' | 'pawn'>];
+}>();
 
-const board = ref<HTMLElement | null>(null);
+const board = shallowRef<HTMLElement | null>(null);
 const api = shallowRef<ReturnType<typeof Chessground> | null>(null);
 
 onMounted(() => {
@@ -41,21 +46,8 @@ onMounted(() => {
   }
 
   api.value = Chessground(board.value, props.config);
+  emit('ready', api.value);
 });
-
-watch(
-  () => [props.config, props.opponentMove] as const,
-  ([config, opponentMove], [prevConfig]) => {
-    if (api.value === null || config === undefined) return;
-    const boardSwitched = config.orientation !== prevConfig?.orientation;
-    if (opponentMove && !boardSwitched) {
-      api.value.move(opponentMove[0], opponentMove[1]);
-      api.value.set({ ...config, fen: undefined });
-    } else {
-      api.value.set(config);
-    }
-  },
-);
 
 onBeforeUnmount(() => {
   if (api.value === null) return;
@@ -88,7 +80,13 @@ const pocketsColor = computed<Color>(() =>
     <div class="relative w-fit h-fit">
       <div :class="cn('relative', props.classBoard)" ref="board"></div>
       <ChessBoardResizer v-if="props.resizable && !props.isPromoting" />
-      <ChessPromotion v-if="isPromoting" :class="props.classPromotion" color="white" file="b" />
+      <ChessPromotion
+        v-if="isPromoting"
+        :class="props.classPromotion"
+        :color="promotionColor ?? 'white'"
+        :file="promotionFile ?? 'a'"
+        @select="emit('promotion-select', $event)"
+      />
     </div>
     <ChessPockets
       :class="props.classPockets"
@@ -115,7 +113,13 @@ const pocketsColor = computed<Color>(() =>
     </div>
     <div :class="cn('relative w-full', props.classContainer)">
       <div :class="cn('relative', props.classBoard)" ref="board"></div>
-      <ChessPromotion v-if="isPromoting" :class="props.classPromotion" color="white" file="b" />
+      <ChessPromotion
+        v-if="isPromoting"
+        :class="props.classPromotion"
+        :color="promotionColor ?? 'white'"
+        :file="promotionFile ?? 'a'"
+        @select="emit('promotion-select', $event)"
+      />
     </div>
     <div :class="cn('flex justify-between items-center gap-2', props.classPocketRow)">
       <ChessPockets
@@ -134,6 +138,12 @@ const pocketsColor = computed<Color>(() =>
   <div v-else :class="cn('relative w-fit h-fit', props.class)">
     <div :class="cn('relative', props.classBoard)" ref="board"></div>
     <ChessBoardResizer v-if="props.resizable && !props.isPromoting" />
-    <ChessPromotion v-if="isPromoting" :class="props.classPromotion" color="white" file="b" />
+    <ChessPromotion
+      v-if="isPromoting"
+      :class="props.classPromotion"
+      :color="promotionColor ?? 'white'"
+      :file="promotionFile ?? 'a'"
+      @select="emit('promotion-select', $event)"
+    />
   </div>
 </template>

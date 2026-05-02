@@ -7,7 +7,7 @@ import {
   isGameStarted,
 } from '@/utils/chessOpsGroundUtils';
 import type { Config } from '@lichess-org/chessground/config';
-import type { Key } from '@lichess-org/chessground/types';
+import type { File, Key } from '@lichess-org/chessground/types';
 import { makeFen, parseFen } from 'chessops/fen';
 import { Material } from 'chessops/setup';
 import { makeUci, parseUci } from 'chessops/util';
@@ -23,7 +23,7 @@ import {
 } from '@/api/websocket/websocket.model';
 import { useWebSocketStore } from './ws';
 import { useAuthStore } from './auth';
-import type { BughouseData, PlayerInfo, PocketData } from '@/api/chess/chess.model';
+import type { BughouseData, CgApi, PlayerInfo, PocketData } from '@/api/chess/chess.model';
 import type { ChatMessage } from '@/components/common/ChatComponent/types';
 
 export const useGameStore = defineStore('game', () => {
@@ -38,6 +38,10 @@ export const useGameStore = defineStore('game', () => {
   } = useChessClocks();
 
   const api = shallowRef<Crazyhouse | null>(null);
+
+  // Chessground instances — set via registerMainBoard / registerMateBoard from MatchPage.
+  const mainCgApi = shallowRef<CgApi | null>(null);
+  const mateCgApi = shallowRef<CgApi | null>(null);
 
   const mainBoardState = shallowRef<Config | undefined>(undefined);
   const mateBoardState = shallowRef<Config | undefined>(undefined);
@@ -83,7 +87,34 @@ export const useGameStore = defineStore('game', () => {
     myClockId.value === 'mainWhite' ? 'mateWhite' : 'mateBlack',
   );
 
-  const pendingOpponentMove = ref<[Key, Key] | null>(null);
+  // Promotion overlay helpers — derived from cached move and board orientation.
+  const promotionColor = computed<Color | undefined>(() =>
+    isPromoting.value ? (mainBoardState.value?.orientation as Color) : undefined,
+  );
+  const promotionFile = computed<File | undefined>(() => {
+    if (!isPromoting.value || !promotionMoveCache.value) return undefined;
+    return chessIdxToSqr(promotionMoveCache.value.to)[0] as File;
+  });
+
+  // Register the Chessground instance created by a ChessBoard component.
+  // Also syncs the board to the latest known config (handles reconnect before remount).
+  const registerMainBoard = (cgApi: CgApi) => {
+    mainCgApi.value = cgApi;
+    if (mainBoardState.value) cgApi.set(mainBoardState.value);
+  };
+
+  const registerMateBoard = (cgApi: CgApi) => {
+    mateCgApi.value = cgApi;
+    if (mateBoardState.value) cgApi.set(mateBoardState.value);
+  };
+
+  const unregisterMainBoard = () => {
+    mainCgApi.value = null;
+  };
+
+  const unregisterMateBoard = () => {
+    mateCgApi.value = null;
+  };
 
   const updateBoardState = (lastMove?: Key[]) => {
     if (!api.value) return;
@@ -95,7 +126,7 @@ export const useGameStore = defineStore('game', () => {
     const check = api.value.isCheck();
     const currentSetup = api.value.toSetup();
 
-    mainBoardState.value = {
+    const config: Config = {
       ...mainBoardState.value,
       fen: makeFen(currentSetup),
       turnColor,
@@ -106,6 +137,9 @@ export const useGameStore = defineStore('game', () => {
       check,
       lastMove,
     };
+
+    mainBoardState.value = config;
+    mainCgApi.value?.set(config);
   };
 
   // In Bughouse, captured pieces go to the partner's board, not the capturer's pocket.
@@ -129,7 +163,7 @@ export const useGameStore = defineStore('game', () => {
     return null;
   };
 
-  const promote = (promotion: NormalMove['promotion']) => {
+  const promote = (promotion: Exclude<Role, 'king' | 'pawn'>) => {
     if (!api.value) return;
 
     if (promotionMoveCache.value === null) {
@@ -144,8 +178,12 @@ export const useGameStore = defineStore('game', () => {
     const capturedRole = detectCapture({ from, to, promotion });
     if (capturedRole && matePockets.value) matePockets.value.partner[capturedRole]++;
     playNormal({ from, to, promotion });
-    pendingOpponentMove.value = null;
     updateBoardState([chessIdxToSqr(from), chessIdxToSqr(to)]);
+
+    // Mark the promoted piece so Chessground knows it reverts to a pawn on capture.
+    const cgTo = chessIdxToSqr(to);
+    const color = mainBoardState.value?.orientation as Color;
+    mainCgApi.value?.setPieces(new Map([[cgTo, { role: promotion, color, promoted: true }]]));
 
     promotionMoveCache.value = null;
     isPromoting.value = false;
@@ -173,7 +211,6 @@ export const useGameStore = defineStore('game', () => {
     const capturedRole = detectCapture({ from, to });
     if (capturedRole && matePockets.value) matePockets.value.partner[capturedRole]++;
     playNormal({ from, to });
-    pendingOpponentMove.value = null;
     updateBoardState([orig, dest]);
     toggleClock('main');
   };
@@ -195,7 +232,6 @@ export const useGameStore = defineStore('game', () => {
     api.value.play({ role, to: toSq });
     if (mainPockets.value) mainPockets.value[moverColor][role as Exclude<Role, 'king'>]--;
 
-    pendingOpponentMove.value = null;
     updateBoardState([to]);
     toggleClock('main');
   };
@@ -216,13 +252,33 @@ export const useGameStore = defineStore('game', () => {
       const capturedRole = detectCapture(parsed);
       if (capturedRole && matePockets.value) matePockets.value.opponent[capturedRole]++;
       playNormal(parsed);
-      pendingOpponentMove.value = [chessIdxToSqr(parsed.from), chessIdxToSqr(parsed.to)];
-      updateBoardState([chessIdxToSqr(parsed.from), chessIdxToSqr(parsed.to)]);
+
+      const cgFrom = chessIdxToSqr(parsed.from);
+      const cgTo = chessIdxToSqr(parsed.to);
+      mainCgApi.value?.move(cgFrom, cgTo);
+
+      // Build updated config without FEN so Chessground keeps the animated position.
+      const turnColor = api.value.turn;
+      const isOurTurn = turnColor === (mainBoardState.value?.orientation as Color | undefined);
+      const dests = isOurTurn ? chessIdxToSqr(api.value.allDests()) : new Map();
+      const check = api.value.isCheck();
+      const currentSetup = api.value.toSetup();
+
+      const config: Config = {
+        ...mainBoardState.value,
+        fen: makeFen(currentSetup),
+        turnColor,
+        movable: { color: isOurTurn ? (mainBoardState.value?.orientation as Color) : undefined, dests },
+        check,
+        lastMove: [cgFrom, cgTo],
+      };
+      mainBoardState.value = config;
+      // Pass fen: undefined so Chessground keeps its animated piece positions.
+      mainCgApi.value?.set({ ...config, fen: undefined });
     } else {
       // Drop: chessops correctly decrements the opponent's pocket (initialized from cfg teams).
       api.value.play(parsed);
       if (mainPockets.value) mainPockets.value[moverColor][parsed.role as Exclude<Role, 'king'>]--;
-      pendingOpponentMove.value = null;
       updateBoardState([chessIdxToSqr(parsed.to)]);
     }
 
@@ -246,11 +302,10 @@ export const useGameStore = defineStore('game', () => {
       );
     } else {
       // Mate board: update lastMove display only (full pocket sync deferred).
+      const lastMove = parseLastMove(data.move) ?? undefined;
       if (mateBoardState.value) {
-        mateBoardState.value = {
-          ...mateBoardState.value,
-          lastMove: parseLastMove(data.move) ?? undefined,
-        };
+        mateBoardState.value = { ...mateBoardState.value, lastMove };
+        mateCgApi.value?.set({ lastMove });
       }
     }
   };
@@ -270,14 +325,12 @@ export const useGameStore = defineStore('game', () => {
 
   const onGameEnd = (data: WsGameEndData) => {
     gameStatus.value = data.status;
-    pendingOpponentMove.value = null;
     clearClocks();
+    const disabledMovable = { color: undefined, dests: new Map<Key, Key[]>() };
     if (mainBoardState.value) {
-      mainBoardState.value = {
-        ...mainBoardState.value,
-        movable: { color: undefined, dests: new Map() },
-      };
+      mainBoardState.value = { ...mainBoardState.value, movable: disabledMovable };
     }
+    mainCgApi.value?.set({ movable: disabledMovable });
   };
 
   const parseLastMove = (uci: string): Key[] | undefined => {
@@ -419,10 +472,16 @@ export const useGameStore = defineStore('game', () => {
       },
       lastMove: mateBoard.lastMove ?? undefined,
     };
+
+    // Sync live Chessground instances if already mounted (reconnect / SYNC scenario).
+    mainCgApi.value?.set(mainBoardState.value);
+    mateCgApi.value?.set(mateBoardState.value);
   };
 
   const clear = () => {
     api.value = null;
+    mainCgApi.value = null;
+    mateCgApi.value = null;
     mainBoardState.value = undefined;
     mateBoardState.value = undefined;
     isPromoting.value = false;
@@ -433,7 +492,6 @@ export const useGameStore = defineStore('game', () => {
     players.value = null;
     myBoardIdx.value = 0;
     gameStatus.value = null;
-    pendingOpponentMove.value = null;
     clearClocks();
   };
 
@@ -441,6 +499,8 @@ export const useGameStore = defineStore('game', () => {
     api,
     clocks,
     isPromoting,
+    promotionColor,
+    promotionFile,
     mainBoardState,
     mateBoardState,
     mainPockets,
@@ -453,7 +513,6 @@ export const useGameStore = defineStore('game', () => {
     partnerClockId,
     enemyClockId,
     chatMessages,
-    pendingOpponentMove,
     setup,
     clear,
     promote,
@@ -465,5 +524,9 @@ export const useGameStore = defineStore('game', () => {
     onGameEnd,
     addChatMessage,
     sendChatMessage,
+    registerMainBoard,
+    registerMateBoard,
+    unregisterMainBoard,
+    unregisterMateBoard,
   };
 });

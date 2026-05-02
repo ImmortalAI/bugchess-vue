@@ -10,8 +10,9 @@ import { useGameStore } from '@/stores/game';
 import { useSessionStore } from '@/stores/session';
 import { breakpointsTailwind, useBreakpoints } from '@vueuse/core';
 import { ArrowLeftRight } from 'lucide-vue-next';
-import { computed, ref } from 'vue';
+import { computed, onBeforeUnmount, ref, shallowRef, watch } from 'vue';
 import type { Color } from '@lichess-org/chessground/types';
+import type { CgApi } from '@/api/chess/chess.model';
 import PlayerPanel from '@/components/chess/PlayerPanel.vue';
 import ChessClock from '@/components/chess/ChessClock.vue';
 
@@ -60,6 +61,30 @@ const mobilePocketsOpponent = computed(() =>
   boardReversed.value ? game.matePockets?.opponent : mainOpponentPocket.value,
 );
 
+// Single Chessground instance shared by the mobile board — re-registered when switching views.
+const mobileCgApi = shallowRef<CgApi | null>(null);
+
+const onMobileBoardReady = (cgApi: CgApi) => {
+  mobileCgApi.value = cgApi;
+  game.registerMainBoard(cgApi);
+};
+
+watch(boardReversed, (reversed) => {
+  if (!mobileCgApi.value) return;
+  if (reversed) {
+    game.unregisterMainBoard();
+    game.registerMateBoard(mobileCgApi.value);
+  } else {
+    game.unregisterMateBoard();
+    game.registerMainBoard(mobileCgApi.value);
+  }
+});
+
+onBeforeUnmount(() => {
+  game.unregisterMainBoard();
+  game.unregisterMateBoard();
+});
+
 const matchNewMsg = (message: string) => {
   game.sendChatMessage(message, auth.user?.username ?? 'Me');
 };
@@ -96,12 +121,14 @@ const quickMessages = [
       class-pocket-row="px-2"
       :config="mobileBoardConfig"
       :is-promoting="!boardReversed && game.isPromoting"
+      :promotion-color="game.promotionColor"
+      :promotion-file="game.promotionFile"
       pockets-orientation="horizontal"
       :pockets-interactive="!boardReversed"
       :pockets="mobilePockets"
       :pockets-opponent="mobilePocketsOpponent"
-      :opponent-move="boardReversed ? null : game.pendingOpponentMove"
-      @drop-new-piece="() => {}"
+      @ready="onMobileBoardReady"
+      @promotion-select="game.promote"
     >
       <template #pocket-top-extra>
         <ChessClock
@@ -158,12 +185,15 @@ const quickMessages = [
         class-board="w-(--cg-width) h-(--cg-height)"
         :config="game.mainBoardState"
         :is-promoting="game.isPromoting"
+        :promotion-color="game.promotionColor"
+        :promotion-file="game.promotionFile"
         :pockets="mainMyPocket"
         :pockets-opponent="mainOpponentPocket"
-        :opponent-move="game.pendingOpponentMove"
         pockets-orientation="vertical"
         pockets-interactive
         resizable
+        @ready="game.registerMainBoard"
+        @promotion-select="game.promote"
       />
     </div>
 
@@ -176,6 +206,7 @@ const quickMessages = [
         :pockets="game.matePockets?.partner"
         :pockets-opponent="game.matePockets?.opponent"
         pockets-orientation="vertical"
+        @ready="game.registerMateBoard"
       />
       <div class="flex gap-2 px-1">
         <PlayerPanel

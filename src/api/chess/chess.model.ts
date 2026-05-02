@@ -1,4 +1,8 @@
 import type { Color, Key } from '@lichess-org/chessground/types';
+import { Chessground } from '@lichess-org/chessground';
+
+/** Chessground API instance returned by the Chessground constructor. */
+export type CgApi = ReturnType<typeof Chessground>;
 
 /** Piece type that can be held in a pocket (all pieces except the King). Keys match the Role type from chessops/types. */
 export type ChessPiece = 'pawn' | 'knight' | 'bishop' | 'rook' | 'queen';
