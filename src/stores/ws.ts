@@ -34,7 +34,7 @@ export const useWebSocketStore = defineStore('websocket', () => {
       heartbeat: {
         message: JSON.stringify({ type: WsMsgType.PING, data: {} }),
         scheduler: (cb) => useIntervalFn(cb, 5000),
-        pongTimeout: 5000,
+        pongTimeout: 1000,
       },
       autoReconnect: {
         delay: 1000,
@@ -86,6 +86,7 @@ export const useWebSocketStore = defineStore('websocket', () => {
       case WsMsgType.LOBBY_JOIN:
         session.setLobby();
         lobby.setState(data.data);
+        router.push('/lobby');
         break;
       case WsMsgType.LOBBY_KICKED:
         session.setIdle();
@@ -124,7 +125,7 @@ export const useWebSocketStore = defineStore('websocket', () => {
 
       // GAME SERVER
       case WsMsgType.GAME_JOIN:
-        game.setup(data.data, true);
+        game.setup(data.data);
         session.setGame();
         if (router.currentRoute.value.name === 'Lobby') router.push('/match');
         break;

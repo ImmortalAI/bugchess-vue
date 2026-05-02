@@ -1,6 +1,6 @@
 import type { AuthLoginData, AuthRegisterData } from '@/api/auth/auth.model';
 import { authLogin, authLogout, authLogoutAll, authRegister } from '@/api/auth/auth.service';
-import type { ActionResult } from '@/api/base/base.model';
+import type { ActionResult, ApiErrorResponse } from '@/api/base/base.model';
 import type { UserData } from '@/api/users/users.model';
 import { usersMe } from '@/api/users/users.service';
 import { isAxiosError } from 'axios';
@@ -16,10 +16,17 @@ export const useAuthStore = defineStore('auth', () => {
     try {
       user.value = await usersMe();
       return { isOk: true, message: '' };
-    } catch {
+    } catch (e) {
       if (user.value) {
         user.value = null;
-        return { isOk: false, message: 'Session expired, please log in again' };
+      }
+      if (isAxiosError(e)) {
+        return {
+          isOk: false,
+          message:
+            (e.response?.data as ApiErrorResponse)?.detail ??
+            'Session expired, please log in again',
+        };
       }
       return { isOk: false, message: 'User not logged in' };
     }
@@ -32,7 +39,13 @@ export const useAuthStore = defineStore('auth', () => {
       return { isOk: true, message };
     } catch (e) {
       if (isAxiosError(e))
-        return { isOk: false, message: (e.response?.data as string) ?? 'Error registering' };
+        return {
+          isOk: false,
+          message:
+            (e.response?.data as ApiErrorResponse)?.detail ??
+            (e.response?.data as string) ??
+            'Error registering',
+        };
       return { isOk: false, message: 'Unable to register: unknown error' };
     }
   };
@@ -44,7 +57,10 @@ export const useAuthStore = defineStore('auth', () => {
       return { isOk: true, message };
     } catch (e) {
       if (isAxiosError(e))
-        return { isOk: false, message: (e.response?.data as string) ?? 'Error logging in' };
+        return {
+          isOk: false,
+          message: (e.response?.data as ApiErrorResponse)?.detail ?? 'Error logging in',
+        };
       return { isOk: false, message: 'Unable to log in: unknown error' };
     }
   };
@@ -56,7 +72,10 @@ export const useAuthStore = defineStore('auth', () => {
       return { isOk: true, message };
     } catch (e) {
       if (isAxiosError(e))
-        return { isOk: false, message: (e.response?.data as string) ?? 'Error logging out' };
+        return {
+          isOk: false,
+          message: (e.response?.data as ApiErrorResponse)?.detail ?? 'Error logging out',
+        };
       return { isOk: false, message: 'Unable to log out: unknown error' };
     }
   };
@@ -70,7 +89,8 @@ export const useAuthStore = defineStore('auth', () => {
       if (isAxiosError(e))
         return {
           isOk: false,
-          message: (e.response?.data as string) ?? 'Error logging out all sessions',
+          message:
+            (e.response?.data as ApiErrorResponse)?.detail ?? 'Error logging out all sessions',
         };
       return { isOk: false, message: 'Unable to log out all sessions: unknown error' };
     }

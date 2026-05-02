@@ -1,8 +1,7 @@
 <script setup lang="ts">
 import ChessBoard from '@/components/chess/ChessBoard.vue';
 import { Button } from '@/components/ui/button';
-import { Chat } from '@/components/common/ChatComponent';
-import { MobileChat } from '@/components/common/MobileChatComponent';
+import GameCtrlPanel from '@/components/common/GameCtrlPanel.vue';
 import { usePageGuard } from '@/composables/usePageGuard';
 import { useTranslation } from '@/composables/useTranslation';
 import { useAuthStore } from '@/stores/auth';
@@ -150,12 +149,15 @@ const quickMessages = [
       {{ t('match.switchBoard') }}
     </Button>
 
-    <!-- Mobile chat -->
-    <MobileChat
+    <!-- Mobile game controls: chat + resign + result -->
+    <GameCtrlPanel
       class="px-2"
-      :messages="game.chatMessages"
+      :last-message="game.lastChatMessage"
+      :game-status="game.gameStatus"
+      :my-board-idx="game.myBoardIdx"
       :quick-messages="quickMessages"
       @send="matchNewMsg"
+      @resign="game.resign()"
     />
   </div>
 
@@ -223,14 +225,14 @@ const quickMessages = [
           class="flex-1 min-w-0"
         />
       </div>
-      <Chat
-        class="h-80"
-        :title="t('chat.title')"
-        :empty-placeholder="t('chat.empty')"
-        :input-placeholder="t('chat.placeholder')"
-        :messages="game.chatMessages"
-        @send="matchNewMsg"
+      <GameCtrlPanel
+        class="w-96"
+        :last-message="game.lastChatMessage"
+        :game-status="game.gameStatus"
+        :my-board-idx="game.myBoardIdx"
         :quick-messages="quickMessages"
+        @send="matchNewMsg"
+        @resign="game.resign()"
       />
     </div>
   </div>

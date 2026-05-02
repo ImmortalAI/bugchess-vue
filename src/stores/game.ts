@@ -7,7 +7,7 @@ import {
   isGameStarted,
 } from '@/utils/chessOpsGroundUtils';
 import type { Config } from '@lichess-org/chessground/config';
-import type { File, Key } from '@lichess-org/chessground/types';
+import type { File, Key, Piece } from '@lichess-org/chessground/types';
 import { makeFen, parseFen } from 'chessops/fen';
 import { Material } from 'chessops/setup';
 import { makeUci, parseUci } from 'chessops/util';
@@ -48,7 +48,7 @@ export const useGameStore = defineStore('game', () => {
 
   const isPromoting = ref(false);
   const promotionMoveCache = ref<{ from: Square; to: Square } | null>(null);
-  const chatMessages = ref<ChatMessage[]>([]);
+  const lastChatMessage = ref<ChatMessage | null>(null);
 
   // Pockets on the main board — tracked separately for Vue reactivity
   // (chessops mutates them in-place which shallowRef won't detect).
@@ -151,16 +151,45 @@ export const useGameStore = defineStore('game', () => {
     api.value!.pockets = pocketsBefore;
   };
 
-  // Returns the role of the piece captured by `move`, or null if no capture.
-  // Must be called before play() while the board still reflects the pre-move state.
-  const detectCapture = (move: NormalMove): Exclude<Role, 'king'> | null => {
-    if (!api.value) return null;
-    const piece = api.value.board.get(move.to);
-    // Standard capture: destination square is occupied.
-    if (piece) return (piece.promoted ? 'pawn' : piece.role) as Exclude<Role, 'king'>;
-    // En passant: pawn moves to the ep square which is empty.
-    if (move.to === api.value.epSquare) return 'pawn';
-    return null;
+  // Route a main-board capture to the correct mate-board pocket.
+  // In Bughouse, the piece captured on the main board goes to the partner's board.
+  // capturedPiece is the Chessground piece that was on the destination square.
+  const applyMainBoardCapture = (capturedPiece: Piece) => {
+    if (!matePockets.value) return;
+    const myColor = mainBoardState.value?.orientation as Color | undefined;
+    if (!myColor) return;
+    const opponentColor: Color = myColor === 'white' ? 'black' : 'white';
+    // Promoted pieces revert to pawn when captured (Bughouse rule).
+    const role = capturedPiece.promoted ? 'pawn' : capturedPiece.role;
+    if (role === 'king') return;
+    const pocketRole = role as Exclude<Role, 'king'>;
+    if (capturedPiece.color === opponentColor) {
+      // User captured opponent's piece → goes to partner's pocket (mate board).
+      matePockets.value.partner[pocketRole]++;
+    } else {
+      // Opponent captured user's piece → goes to the partner's opponent's pocket.
+      matePockets.value.opponent[pocketRole]++;
+    }
+  };
+
+  // Route a mate-board capture to the correct main-board pocket.
+  // On the mate board the enemy has the SAME color as me, so capturedPiece.color === myColor
+  // means the enemy's piece was taken by the partner → goes to my pocket.
+  const applyMateBoardCapture = (capturedPiece: Piece) => {
+    if (!mainPockets.value) return;
+    const myColor = mainBoardState.value?.orientation as Color | undefined;
+    if (!myColor) return;
+    const opponentColor: Color = myColor === 'white' ? 'black' : 'white';
+    const role = capturedPiece.promoted ? 'pawn' : capturedPiece.role;
+    if (role === 'king') return;
+    const pocketRole = role as Exclude<Role, 'king'>;
+    if (capturedPiece.color === myColor) {
+      // Enemy piece captured by partner → goes to my pocket on the main board.
+      mainPockets.value[myColor][pocketRole]++;
+    } else {
+      // Partner piece captured by enemy → goes to opponent's pocket on the main board.
+      mainPockets.value[opponentColor][pocketRole]++;
+    }
   };
 
   const promote = (promotion: Exclude<Role, 'king' | 'pawn'>) => {
@@ -175,8 +204,9 @@ export const useGameStore = defineStore('game', () => {
 
     ws.sendMessage({ type: WsMsgType.GAME_MOVE, data: { idx: myBoardIdx.value, move: uci } });
 
-    const capturedRole = detectCapture({ from, to, promotion });
-    if (capturedRole && matePockets.value) matePockets.value.partner[capturedRole]++;
+    // Promotion capture is reported by events.move on the main board (fired when
+    // the pawn moved to the promotion square during the user's drag). No manual
+    // capture detection needed here.
     playNormal({ from, to, promotion });
     updateBoardState([chessIdxToSqr(from), chessIdxToSqr(to)]);
 
@@ -208,8 +238,11 @@ export const useGameStore = defineStore('game', () => {
     const uci = makeUci({ from, to });
     ws.sendMessage({ type: WsMsgType.GAME_MOVE, data: { idx: myBoardIdx.value, move: uci } });
 
-    const capturedRole = detectCapture({ from, to });
-    if (capturedRole && matePockets.value) matePockets.value.partner[capturedRole]++;
+    // En passant: Chessground fires events.move with an empty destination (no capturedPiece),
+    // so we must detect it manually before playNormal clears the ep square.
+    const isEp = to === api.value.epSquare && api.value.board.get(from)?.role === 'pawn';
+    if (isEp && matePockets.value) matePockets.value.partner['pawn']++;
+    // Normal captures are handled by the events.move handler (applyMainBoardCapture).
     playNormal({ from, to });
     updateBoardState([orig, dest]);
     toggleClock('main');
@@ -247,15 +280,26 @@ export const useGameStore = defineStore('game', () => {
     const moverColor = api.value.turn;
 
     if ('from' in parsed) {
-      // Normal move: captures must not go to this board's pockets in Bughouse.
-      // The captured piece goes to the partner's opponent's pocket on the mate board.
-      const capturedRole = detectCapture(parsed);
-      if (capturedRole && matePockets.value) matePockets.value.opponent[capturedRole]++;
+      // En passant: Chessground won't report a capturedPiece (empty destination),
+      // so detect it manually before playNormal clears the ep square.
+      const isEp =
+        parsed.to === api.value.epSquare && api.value.board.get(parsed.from)?.role === 'pawn';
+      if (isEp && matePockets.value) matePockets.value.opponent['pawn']++;
+      // Normal captures are handled by the events.move handler (applyMainBoardCapture).
       playNormal(parsed);
 
       const cgFrom = chessIdxToSqr(parsed.from);
       const cgTo = chessIdxToSqr(parsed.to);
       mainCgApi.value?.move(cgFrom, cgTo);
+
+      // Mark opponent's promoted piece so future captures of it correctly revert to pawn.
+      if (parsed.promotion) {
+        const opponentColor: Color =
+          mainBoardState.value?.orientation === 'white' ? 'black' : 'white';
+        mainCgApi.value?.setPieces(
+          new Map([[cgTo, { role: parsed.promotion, color: opponentColor, promoted: true }]]),
+        );
+      }
 
       // Build updated config without FEN so Chessground keeps the animated position.
       const turnColor = api.value.turn;
@@ -268,7 +312,10 @@ export const useGameStore = defineStore('game', () => {
         ...mainBoardState.value,
         fen: makeFen(currentSetup),
         turnColor,
-        movable: { color: isOurTurn ? (mainBoardState.value?.orientation as Color) : undefined, dests },
+        movable: {
+          color: isOurTurn ? (mainBoardState.value?.orientation as Color) : undefined,
+          dests,
+        },
         check,
         lastMove: [cgFrom, cgTo],
       };
@@ -301,17 +348,72 @@ export const useGameStore = defineStore('game', () => {
         Math.max(0, data.black - (nowActive === 'black' ? elapsed : 0)),
       );
     } else {
-      // Mate board: update lastMove display only (full pocket sync deferred).
-      const lastMove = parseLastMove(data.move) ?? undefined;
-      if (mateBoardState.value) {
-        mateBoardState.value = { ...mateBoardState.value, lastMove };
-        mateCgApi.value?.set({ lastMove });
+      if (data.move.includes('@')) {
+        // Drop on mate board: no capture possible, just update lastMove display.
+        const lastMove = parseLastMove(data.move) ?? undefined;
+        if (mateBoardState.value) {
+          mateBoardState.value = { ...mateBoardState.value, lastMove };
+          mateCgApi.value?.set({ lastMove });
+        }
+      } else {
+        const cgFrom = data.move.slice(0, 2) as Key;
+        const cgTo = data.move.slice(2, 4) as Key;
+
+        // Read the moving piece BEFORE the move for en passant detection and
+        // promotion marking — cgApi.move() modifies Chessground state synchronously.
+        const movingPiece = mateCgApi.value?.state.pieces.get(cgFrom);
+        const destPiece = mateCgApi.value?.state.pieces.get(cgTo);
+
+        // En passant: pawn moves diagonally to an empty square.
+        // Chessground won't fire capturedPiece in this case.
+        const isEp = movingPiece?.role === 'pawn' && !destPiece && cgFrom[0] !== cgTo[0];
+        if (isEp && movingPiece) {
+          // The captured pawn has the opposite color of the moving pawn.
+          applyMateBoardCapture({
+            role: 'pawn',
+            color: movingPiece.color === 'white' ? 'black' : 'white',
+          });
+        }
+
+        // Apply the move — fires events.move (async) with capturedPiece for normal captures.
+        mateCgApi.value?.move(cgFrom, cgTo);
+
+        // Mark promoted piece on mate board so future captures revert to pawn.
+        const promotionChar = data.move.length === 5 ? data.move[4] : undefined;
+        if (promotionChar && movingPiece) {
+          const promotionRole = charToRole(promotionChar);
+          if (promotionRole) {
+            mateCgApi.value?.setPieces(
+              new Map([[cgTo, { role: promotionRole, color: movingPiece.color, promoted: true }]]),
+            );
+          }
+        }
+
+        if (mateBoardState.value) {
+          mateBoardState.value = { ...mateBoardState.value, lastMove: [cgFrom, cgTo] };
+        }
+
+        // Sync mate board clocks (mirrors main board pattern).
+        const elapsed = Math.max(0, Date.now() - data.timestamp);
+        const nowActive = movingPiece
+          ? movingPiece.color === 'white'
+            ? 'black'
+            : 'white'
+          : 'white';
+        syncClock(
+          colorToClockId('white', 'mate'),
+          Math.max(0, data.white - (nowActive === 'white' ? elapsed : 0)),
+        );
+        syncClock(
+          colorToClockId('black', 'mate'),
+          Math.max(0, data.black - (nowActive === 'black' ? elapsed : 0)),
+        );
       }
     }
   };
 
   const addChatMessage = (sender: string, text: string, isOwn: boolean) => {
-    chatMessages.value = [...chatMessages.value, { sender, text, isOwn }];
+    lastChatMessage.value = { sender, text, isOwn };
   };
 
   const sendChatMessage = (text: string, senderName: string) => {
@@ -339,20 +441,28 @@ export const useGameStore = defineStore('game', () => {
     return [uci.slice(0, 2) as Key, uci.slice(2, 4) as Key];
   };
 
+  const charToRole = (char: string): Exclude<Role, 'king' | 'pawn'> | undefined => {
+    const map: Record<string, Exclude<Role, 'king' | 'pawn'>> = {
+      q: 'queen',
+      r: 'rook',
+      b: 'bishop',
+      n: 'knight',
+    };
+    return map[char];
+  };
+
   /**
    * Initialize (or re-initialize) the full game state from a server snapshot.
    * Called on both fresh GAME_JOIN and SYNC while in a game.
    */
-  const setup = (data: BughouseData | null, newGame?: boolean) => {
+  const setup = (data: BughouseData | null) => {
     // Clear state if server returned null (game not started yet).
     if (data === null) {
       clear();
       return;
     }
 
-    // On sync do not clear messages in chat
-    if (newGame) chatMessages.value = [];
-    gameStatus.value = null;
+    gameStatus.value = data.status;
 
     // Find this user's board and player slot indices.
     const myUsername = useAuthStore().user?.username;
@@ -459,6 +569,11 @@ export const useGameStore = defineStore('game', () => {
           afterNewPiece: drop,
         },
       },
+      events: {
+        move: (_orig: Key, _dest: Key, capturedPiece?: Piece) => {
+          if (capturedPiece) applyMainBoardCapture(capturedPiece);
+        },
+      },
       check,
       lastMove: myBoard.lastMove ?? undefined,
     };
@@ -469,6 +584,11 @@ export const useGameStore = defineStore('game', () => {
       movable: {
         free: false,
         dests: new Map<Key, Key[]>(),
+      },
+      events: {
+        move: (_orig: Key, _dest: Key, capturedPiece?: Piece) => {
+          if (capturedPiece) applyMateBoardCapture(capturedPiece);
+        },
       },
       lastMove: mateBoard.lastMove ?? undefined,
     };
@@ -486,7 +606,7 @@ export const useGameStore = defineStore('game', () => {
     mateBoardState.value = undefined;
     isPromoting.value = false;
     promotionMoveCache.value = null;
-    chatMessages.value = [];
+    lastChatMessage.value = null;
     mainPockets.value = null;
     matePockets.value = null;
     players.value = null;
@@ -512,7 +632,7 @@ export const useGameStore = defineStore('game', () => {
     opponentClockId,
     partnerClockId,
     enemyClockId,
-    chatMessages,
+    lastChatMessage,
     setup,
     clear,
     promote,

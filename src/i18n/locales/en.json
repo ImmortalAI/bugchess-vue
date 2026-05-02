@@ -22,7 +22,8 @@
     "errorAllFieldsRequired": "All fields are required",
     "errorLoginFailed": "Login failed. Please try again.",
     "errorPasswordMismatch": "Passwords do not match",
-    "errorRegisterFailed": "Registration failed. Please try again."
+    "errorRegisterFailed": "Registration failed. Please try again.",
+    "successRegister": "Registration successful"
   },
   "home": {
     "inLobby": "You already have an active lobby",
@@ -42,7 +43,10 @@
     "textSeconds": "Increment per move"
   },
   "lobby": {
+    "leader": "Leader",
+    "you": "You",
     "invitePlayer": "Invite...",
+    "emptySlot": "Empty slot",
     "kickConfirm": "Remove player?",
     "kickConfirmYes": "Remove",
     "kickConfirmNo": "Cancel",
@@ -63,7 +67,15 @@
     "retryBtn": "Try again"
   },
   "match": {
-    "switchBoard": "Switch board"
+    "switchBoard": "Switch board",
+    "gameResult": {
+      "win": "Victory",
+      "loss": "Defeat",
+      "draw": "Draw",
+      "aborted": "Aborted"
+    },
+    "resign": "Resign",
+    "resignConfirm": "Confirm resign"
   },
   "chat": {
     "title": "Chat",

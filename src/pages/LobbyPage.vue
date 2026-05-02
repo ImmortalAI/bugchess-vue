@@ -28,12 +28,12 @@ const ws = useWebSocketStore();
 
 const router = useRouter();
 
-const isLeader = computed(() => lobby.teamA?.[0]?.username === auth.user?.username);
+const isLeader = computed(() => lobby.leader === auth.user?.username);
 
 const sendConfigUpdate = useDebounceFn(() => {
   ws.sendMessage({
     type: WsMsgType.LOBBY_CONFIG,
-    data: { initMs: lobby.time * 60000, incrMs: lobby.increment * 1000, rated: lobby.rated },
+    data: { initSec: lobby.time * 60000, incrSec: lobby.increment * 1000, rated: lobby.rated },
   });
 }, 400);
 
@@ -73,74 +73,51 @@ const sendInvite = (username: string) => {
 </script>
 
 <template>
-  <div
-    class="flex justify-center items-center w-full h-full p-4"
-    :class="{ invisible: !session.initialized }"
-  >
+  <div class="flex justify-center items-center w-full h-full p-4" :class="{ invisible: !session.initialized }">
     <div class="flex flex-col gap-8 p-8 border border-primary rounded-lg w-full sm:w-auto">
-      <ChessClockSlider
-        v-model:minutes="lobby.time"
-        v-model:seconds="lobby.increment"
-        :disabled="!isLeader"
-        @update:minutes="sendConfigUpdate"
-        @update:seconds="sendConfigUpdate"
-      />
+      <ChessClockSlider v-model:minutes="lobby.time" v-model:seconds="lobby.increment" :disabled="!isLeader"
+        @update:minutes="sendConfigUpdate" @update:seconds="sendConfigUpdate" />
       <div class="flex gap-4 items-stretch">
         <div class="flex flex-col gap-2 flex-1 border border-border rounded-md p-3">
           <span class="text-xs font-medium text-muted-foreground text-center">{{
             t('lobby.team1')
-          }}</span>
+            }}</span>
           <div class="flex flex-col gap-2 justify-end flex-1">
-            <LobbyPlayer :username="lobby.teamA?.[0]?.username" @invite="openInviteDialog(0)" />
-            <LobbyPlayer
-              :username="lobby.teamA?.[1]?.username"
-              :canKick="isLeader"
-              @kick="kickPlayer(lobby.teamA?.[1]?.username)"
-              @invite="openInviteDialog(1)"
-            />
+            <LobbyPlayer :username="lobby.teamA?.[0]?.username" :canInvite="isLeader"
+              :isLeader="lobby.teamA?.[0]?.username === lobby.leader"
+              :isMe="lobby.teamA?.[0]?.username === auth.user?.username"
+              @invite="openInviteDialog(0)" />
+            <LobbyPlayer :username="lobby.teamA?.[1]?.username" :canKick="isLeader" :canInvite="isLeader"
+              :isLeader="lobby.teamA?.[1]?.username === lobby.leader"
+              :isMe="lobby.teamA?.[1]?.username === auth.user?.username"
+              @kick="kickPlayer(lobby.teamA?.[1]?.username)" @invite="openInviteDialog(1)" />
           </div>
         </div>
         <div class="flex flex-col gap-2 flex-1 border border-border rounded-md p-3">
           <span class="text-xs font-medium text-muted-foreground text-center">{{
             t('lobby.team2')
-          }}</span>
+            }}</span>
           <div class="flex flex-col gap-2 justify-end flex-1">
-            <LobbyPlayer
-              :username="lobby.teamB?.[0]?.username"
-              :canKick="isLeader"
-              @kick="kickPlayer(lobby.teamB?.[0]?.username)"
-              @invite="openInviteDialog(2)"
-            />
-            <LobbyPlayer
-              :username="lobby.teamB?.[1]?.username"
-              :canKick="isLeader"
-              @kick="kickPlayer(lobby.teamB?.[1]?.username)"
-              @invite="openInviteDialog(3)"
-            />
+            <LobbyPlayer :username="lobby.teamB?.[0]?.username" :canKick="isLeader" :canInvite="isLeader"
+              :isLeader="lobby.teamB?.[0]?.username === lobby.leader"
+              :isMe="lobby.teamB?.[0]?.username === auth.user?.username"
+              @kick="kickPlayer(lobby.teamB?.[0]?.username)" @invite="openInviteDialog(2)" />
+            <LobbyPlayer :username="lobby.teamB?.[1]?.username" :canKick="isLeader" :canInvite="isLeader"
+              :isLeader="lobby.teamB?.[1]?.username === lobby.leader"
+              :isMe="lobby.teamB?.[1]?.username === auth.user?.username"
+              @kick="kickPlayer(lobby.teamB?.[1]?.username)" @invite="openInviteDialog(3)" />
           </div>
         </div>
       </div>
       <div class="flex flex-col sm:flex-row sm:justify-between gap-3">
         <div class="flex items-center space-x-2">
-          <Switch
-            id="rating-switch"
-            v-model="lobby.rated"
-            :disabled="!isLeader"
-            @update:modelValue="sendConfigUpdate"
-          />
+          <Switch id="rating-switch" v-model="lobby.rated" :disabled="!isLeader"
+            @update:modelValue="sendConfigUpdate" />
           <Label for="rating-switch">{{ t('lobby.rating') }}</Label>
         </div>
         <div class="flex gap-2">
-          <ConfirmButton
-            :label="t('lobby.leave')"
-            :confirmLabel="t('lobby.leaveConfirm')"
-            @confirm="leaveLobby"
-          />
-          <Button
-            :variant="lobby.inQueue ? 'outline' : 'default'"
-            :disabled="!isLeader"
-            @click="toggleMatchmaking"
-          >
+          <ConfirmButton :label="t('lobby.leave')" :confirmLabel="t('lobby.leaveConfirm')" @confirm="leaveLobby" />
+          <Button :variant="lobby.inQueue ? 'outline' : 'default'" :disabled="!isLeader" @click="toggleMatchmaking">
             {{ lobby.inQueue ? t('lobby.cancelSearch') : t('lobby.startGame') }}
           </Button>
         </div>

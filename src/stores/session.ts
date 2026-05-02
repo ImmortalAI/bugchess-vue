@@ -5,8 +5,8 @@ import { computed, ref } from 'vue';
 export type PlayerState = 'Idle' | 'Lobby' | 'Game';
 
 export const useSessionStore = defineStore('session', () => {
-  const state = ref<PlayerState>('Lobby');
-  const initialized = ref(true);
+  const state = ref<PlayerState>('Idle');
+  const initialized = ref(false);
   /** username of the player who sent an invite, null if no pending invite */
   const pendingInvite = ref<string | null>(null);
 

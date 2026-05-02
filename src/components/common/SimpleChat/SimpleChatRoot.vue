@@ -1,13 +1,13 @@
 <script setup lang="ts">
 import { onBeforeUnmount, ref, watch } from 'vue';
 import type { ChatMessage } from '../ChatComponent/types';
-import MobileChatNotification from './MobileChatNotification.vue';
-import MobileChatQuickBar from './MobileChatQuickBar.vue';
+import SimpleChatNotification from './SimpleChatNotification.vue';
+import SimpleChatQuickBar from './SimpleChatQuickBar.vue';
 
 const NOTIFICATION_DURATION_MS = 4000;
 
 const props = defineProps<{
-  messages: ChatMessage[];
+  message: ChatMessage | null;
   quickMessages?: string[];
   disabled?: boolean;
 }>();
@@ -22,10 +22,8 @@ const notifVisible = ref(false);
 let dismissTimer: ReturnType<typeof setTimeout> | null = null;
 
 watch(
-  () => props.messages.length,
-  (newLen, oldLen) => {
-    if (newLen <= oldLen) return;
-    const msg = props.messages[newLen - 1] as ChatMessage | undefined;
+  () => props.message,
+  (msg) => {
     if (!msg || msg.isOwn) return;
 
     notifSender.value = msg.sender;
@@ -52,9 +50,9 @@ const handleSelect = (msg: string) => {
 <template>
   <div class="flex flex-col gap-1.5">
     <Transition name="notif">
-      <MobileChatNotification v-if="notifVisible" :sender="notifSender" :text="notifText" />
+      <SimpleChatNotification v-if="notifVisible" :sender="notifSender" :text="notifText" />
     </Transition>
-    <MobileChatQuickBar
+    <SimpleChatQuickBar
       v-if="props.quickMessages?.length"
       :messages="props.quickMessages"
       :disabled="props.disabled"

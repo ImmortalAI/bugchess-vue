@@ -33,21 +33,15 @@ const secondsArray = computed({
   <div class="flex flex-col sm:flex-row gap-2 sm:gap-1">
     <div class="flex flex-col gap-2 w-full sm:w-xs">
       <div class="flex justify-between">
-        <span>{{ t('chessClockSlider.textMinutes') }}</span
-        ><span
-          class="bg-muted border border-border rounded-xs aspect-square text-[0.9rem] text-center"
-          >{{ minutes }}</span
-        >
+        <span>{{ t('chessClockSlider.textMinutes') }}</span><span
+          class="bg-muted border border-border rounded-xs aspect-square text-[0.9rem] text-center">{{ minutes }}</span>
       </div>
-      <Slider v-model="minutesArray" :min="0" :max="180" :step="1" :disabled="props.disabled" />
+      <Slider v-model="minutesArray" :min="1" :max="180" :step="1" :disabled="props.disabled" />
     </div>
     <div class="flex flex-col gap-2 w-full sm:w-xs">
       <div class="flex justify-between">
-        <span>{{ t('chessClockSlider.textSeconds') }}</span
-        ><span
-          class="bg-muted border border-border rounded-xs aspect-square text-[0.9rem] text-center"
-          >{{ seconds }}</span
-        >
+        <span>{{ t('chessClockSlider.textSeconds') }}</span><span
+          class="bg-muted border border-border rounded-xs aspect-square text-[0.9rem] text-center">{{ seconds }}</span>
       </div>
       <Slider v-model="secondsArray" :min="0" :max="59" :step="1" :disabled="props.disabled" />
     </div>

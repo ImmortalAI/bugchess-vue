@@ -22,7 +22,8 @@
     "errorAllFieldsRequired": "Все поля обязательные",
     "errorLoginFailed": "Неудачный вход. Пожалуйста, попробуйте ещё раз.",
     "errorPasswordMismatch": "Пароли не совпадают",
-    "errorRegisterFailed": "Неудачная регистрация. Пожалуйста, попробуйте ещё раз."
+    "errorRegisterFailed": "Неудачная регистрация. Пожалуйста, попробуйте ещё раз.",
+    "successRegister": "Регистрация прошла успешно"
   },
   "home": {
     "inLobby": "У вас уже есть активное лобби",
@@ -42,7 +43,10 @@
     "textSeconds": "Добавление секунд на ход"
   },
   "lobby": {
+    "leader": "Лидер",
+    "you": "Вы",
     "invitePlayer": "Пригласить...",
+    "emptySlot": "Пустой слот",
     "kickConfirm": "Исключить игрока?",
     "kickConfirmYes": "Исключить",
     "kickConfirmNo": "Отмена",
@@ -63,7 +67,15 @@
     "retryBtn": "Попробовать снова"
   },
   "match": {
-    "switchBoard": "Сменить доску"
+    "switchBoard": "Сменить доску",
+    "gameResult": {
+      "win": "Победа",
+      "loss": "Поражение",
+      "draw": "Ничья",
+      "aborted": "Игра отменена"
+    },
+    "resign": "Сдаться",
+    "resignConfirm": "Подтвердить сдачу"
   },
   "chat": {
     "title": "Чат",
