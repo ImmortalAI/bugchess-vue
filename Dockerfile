@@ -28,7 +28,7 @@ FROM nginx:1.27-alpine AS runtime
 RUN <<'EOF'
 cat > /etc/nginx/conf.d/default.conf <<'NGINX'
 server {
-  listen 80;
+  listen 3000;
   server_name _;
 
   root /usr/share/nginx/html;
@@ -49,6 +49,6 @@ EOF
 
 COPY --from=build /app/dist /usr/share/nginx/html
 
-EXPOSE 80
+EXPOSE 3000
 
 CMD ["nginx", "-g", "daemon off;"]
