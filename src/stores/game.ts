@@ -178,22 +178,27 @@ export const useGameStore = defineStore('game', () => {
   // Route a main-board capture to the correct mate-board pocket.
   // mateBoardState orientation is the partner's color, so it directly selects the bucket.
   const applyMainBoardCapture = (capturedPiece: Piece) => {
-    if (!matePockets.value) return;
+    if (!matePockets.value || !mateApi.value) return;
     const role = capturedPiece.promoted ? 'pawn' : capturedPiece.role;
     if (role === 'king') return;
     const pocketRole = role as Exclude<Role, 'king'>;
     if (capturedPiece.color === mateBoardState.value?.orientation)
       matePockets.value.partner[pocketRole]++;
     else matePockets.value.opponent[pocketRole]++;
+
+    mateApi.value.pockets![capturedPiece.color][pocketRole]++;
   };
 
   // Route a mate-board capture to the correct main-board pocket.
   // Captured pieces keep their color — the color directly keys into mainPockets.
   const applyMateBoardCapture = (capturedPiece: Piece) => {
-    if (!mainPockets.value) return;
+    if (!mainPockets.value || !api.value) return;
     const role = capturedPiece.promoted ? 'pawn' : capturedPiece.role;
     if (role === 'king') return;
-    mainPockets.value[capturedPiece.color][role as Exclude<Role, 'king'>]++;
+    const pocketRole = role as Exclude<Role, 'king'>;
+    mainPockets.value[capturedPiece.color][pocketRole]++;
+
+    api.value.pockets![capturedPiece.color][pocketRole]++;
   };
 
   const promote = (promotion: Exclude<Role, 'king' | 'pawn'>) => {
@@ -337,8 +342,8 @@ export const useGameStore = defineStore('game', () => {
     if (data.idx === myBoardIdx.value) {
       moveOpponent(data.move);
 
-      syncClock(colorToClockId('white', 'main'), Math.max(0, data.white));
-      syncClock(colorToClockId('black', 'main'), Math.max(0, data.black));
+      syncClock(colorToClockId('white', 'main'), Math.max(0, data.whiteClockTime));
+      syncClock(colorToClockId('black', 'main'), Math.max(0, data.blackClockTime));
     } else {
       if (!mateApi.value) return;
 
@@ -395,8 +400,8 @@ export const useGameStore = defineStore('game', () => {
       }
 
       updateMateBoardState(lastMove);
-      syncClock(colorToClockId('white', 'mate'), Math.max(0, data.white));
-      syncClock(colorToClockId('black', 'mate'), Math.max(0, data.black));
+      syncClock(colorToClockId('white', 'mate'), Math.max(0, data.whiteClockTime));
+      syncClock(colorToClockId('black', 'mate'), Math.max(0, data.blackClockTime));
 
       advanceClock('mate', mateApi.value.fullmoves, mateApi.value.turn);
     }
@@ -531,6 +536,7 @@ export const useGameStore = defineStore('game', () => {
       orientation: myColor,
       turnColor,
       movable: {
+        free: false,
         color: isOurTurn ? myColor : undefined,
         dests,
         events: {
@@ -550,7 +556,11 @@ export const useGameStore = defineStore('game', () => {
     mateBoardState.value = {
       fen: mateBoard.fen,
       orientation: opponentColor,
-      viewOnly: true,
+      movable: {
+        free: false,
+        color: undefined,
+        dests: new Map(),
+      },
       events: {
         move: (_orig: Key, _dest: Key, capturedPiece?: Piece) => {
           if (capturedPiece) applyMateBoardCapture(capturedPiece);

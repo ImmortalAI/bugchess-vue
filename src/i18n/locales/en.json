@@ -4,6 +4,7 @@
     "guest": "Guest",
     "themeLight": "Light theme",
     "themeDark": "Dark theme",
+    "stats": "Statistics",
     "settings": "Settings",
     "logout": "Log out"
   },
@@ -89,6 +90,10 @@
     "message": "Player {username} invites you to a game",
     "accept": "Accept",
     "decline": "Decline"
+  },
+  "stats": {
+    "pageTitle": "Statistics",
+    "ratingLabel": "Your rating"
   },
   "settings": {
     "pageTitle": "Settings",

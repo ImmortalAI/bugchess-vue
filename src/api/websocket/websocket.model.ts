@@ -140,9 +140,9 @@ export type WsGameMove = {
 /** Extended move payload received from the server; includes updated clock values after the move. */
 export type WsGameMoveReceive = WsGameMove & {
   /** Remaining time for white on the moved board, in milliseconds. */
-  white: number;
+  whiteClockTime: number;
   /** Remaining time for black on the moved board, in milliseconds. */
-  black: number;
+  blackClockTime: number;
 };
 
 /** A chat message between teammates; plain string content. */

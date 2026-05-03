@@ -12,7 +12,7 @@ import { useAuthStore } from '@/stores/auth';
 import { useTranslation } from '@/composables/useTranslation';
 import { useDark, useToggle } from '@vueuse/core';
 import { computed } from 'vue';
-import { Languages, LogIn, LogOut, Moon, Settings, Sun } from 'lucide-vue-next';
+import { BarChart2, Languages, LogIn, LogOut, Moon, Settings, Sun } from 'lucide-vue-next';
 import { useRouter } from 'vue-router';
 
 const props = withDefaults(defineProps<{ grayscale?: boolean }>(), { grayscale: false });
@@ -51,6 +51,10 @@ const avatarSvg = computed(() => multiavatar(displayName.value));
 
       <template v-if="auth.isAuthenticated">
         <DropdownMenuSeparator />
+        <DropdownMenuItem @click="router.push('/stats')">
+          <BarChart2 class="mr-2 size-4" />
+          {{ t('header.stats') }}
+        </DropdownMenuItem>
         <DropdownMenuItem @click="router.push('/settings')">
           <Settings class="mr-2 size-4" />
           {{ t('header.settings') }}

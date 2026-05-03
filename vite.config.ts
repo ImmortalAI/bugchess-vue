@@ -1,3 +1,5 @@
+import { execSync } from 'node:child_process';
+import { readFileSync } from 'node:fs';
 import { fileURLToPath, URL } from 'node:url';
 
 import { defineConfig, loadEnv, PluginOption, ServerOptions } from 'vite';
@@ -5,6 +7,40 @@ import vue from '@vitejs/plugin-vue';
 import vueDevTools from 'vite-plugin-vue-devtools';
 import tailwindcss from '@tailwindcss/vite';
 import { VitePWA } from 'vite-plugin-pwa';
+
+type PackageJson = {
+  version?: string;
+};
+
+const packageJson = JSON.parse(
+  readFileSync(new URL('./package.json', import.meta.url), 'utf-8'),
+) as PackageJson;
+
+const getCommitHash = () => {
+  try {
+    return execSync('git rev-parse --short=7 HEAD', {
+      stdio: ['ignore', 'pipe', 'ignore'],
+    })
+      .toString()
+      .trim();
+  } catch {
+    return 'unknown';
+  }
+};
+
+const formatBuildDate = (date: Date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+
+  return `${year}-${month}-${day} ${hours}:${minutes}`;
+};
+
+const buildLabel = `v${packageJson.version ?? '0.0.0'} | ${getCommitHash()} | ${formatBuildDate(
+  new Date(),
+)}`;
 
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => {
@@ -82,5 +118,8 @@ export default defineConfig(({ mode }) => {
       },
     },
     server: server,
+    define: {
+      __APP_BUILD_LABEL__: JSON.stringify(buildLabel),
+    },
   };
 });
