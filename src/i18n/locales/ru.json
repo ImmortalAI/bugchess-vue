@@ -4,6 +4,7 @@
     "guest": "Гость",
     "themeLight": "Светлая тема",
     "themeDark": "Тёмная тема",
+    "stats": "Статистика",
     "settings": "Настройки",
     "logout": "Выйти"
   },
@@ -89,6 +90,10 @@
     "message": "Вас приглашает игрок {username}",
     "accept": "Принять",
     "decline": "Отклонить"
+  },
+  "stats": {
+    "pageTitle": "Статистика",
+    "ratingLabel": "Ваш рейтинг"
   },
   "settings": {
     "pageTitle": "Настройки",

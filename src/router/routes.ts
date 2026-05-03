@@ -40,6 +40,11 @@ export const routes: RouteRecordRaw[] = [
     component: () => import('@/pages/SettingsPage.vue'),
   },
   {
+    name: 'Stats',
+    path: '/stats',
+    component: () => import('@/pages/StatsPage.vue'),
+  },
+  {
     name: 'ServerUnavailable',
     path: '/server-unavailable',
     component: () => import('@/pages/ServerUnavailablePage.vue'),
