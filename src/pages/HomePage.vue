@@ -56,7 +56,7 @@ const createLobby = (option: QuickGameOption) => {
 
   ws.sendMessage({
     type: WsMsgType.LOBBY_CREATE,
-    data: { initMs: time * 60000, incrMs: increment * 1000 },
+    data: { clockTime: time * 60000, incr: increment * 1000 },
   });
 
   router.push('/lobby');
@@ -65,51 +65,30 @@ const createLobby = (option: QuickGameOption) => {
 
 <template>
   <div class="relative w-full h-full">
-    <img
-      src="@/assets/imgs/logo.png"
-      alt=""
-      aria-hidden="true"
-      class="absolute inset-0 w-full h-full object-contain opacity-20 pointer-events-none select-none filter dark:invert-100"
-    />
+    <img src="@/assets/imgs/logo.png" alt="" aria-hidden="true"
+      class="absolute inset-0 w-full h-full object-contain opacity-20 pointer-events-none select-none filter dark:invert-100" />
 
-    <div
-      class="relative w-full h-full flex items-start sm:items-center justify-center p-4 overflow-auto"
-    >
+    <div class="relative w-full h-full flex items-start sm:items-center justify-center p-4 overflow-auto">
       <div class="w-full max-w-lg flex flex-col gap-4">
-        <div
-          v-if="isBlocked"
-          class="flex flex-col xs:flex-row items-start xs:items-center justify-between gap-3 rounded-xl border border-border/70 bg-card/70 backdrop-blur-sm px-4 py-3"
-        >
+        <div v-if="isBlocked"
+          class="flex flex-col xs:flex-row items-start xs:items-center justify-between gap-3 rounded-xl border border-border/70 bg-card/70 backdrop-blur-sm px-4 py-3">
           <p class="text-sm text-muted-foreground">
             {{ session.isInLobby ? t('home.inLobby') : t('home.inGame') }}
           </p>
-          <Button
-            size="sm"
-            class="w-full xs:w-auto shrink-0"
-            @click="router.push(session.isInLobby ? '/lobby' : '/match')"
-          >
+          <Button size="sm" class="w-full xs:w-auto shrink-0"
+            @click="router.push(session.isInLobby ? '/lobby' : '/match')">
             {{ session.isInLobby ? t('home.returnToLobby') : t('home.returnToGame') }}
           </Button>
         </div>
 
         <div class="w-full grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
-          <TileButton
-            v-for="option in quickGameOptions"
-            :key="option.time"
-            :title="option.time"
-            :subtitle="t(option.name)"
-            :disabled="isBlocked"
-            @click="createLobby(option)"
-          />
+          <TileButton v-for="option in quickGameOptions" :key="option.time" :title="option.time"
+            :subtitle="t(option.name)" :disabled="isBlocked" @click="createLobby(option)" />
         </div>
       </div>
     </div>
 
-    <GameInviteWidget
-      :visible="inviteVisible"
-      :inviter-username="inviterUsername"
-      @accept="onInviteAccept"
-      @decline="onInviteDecline"
-    />
+    <GameInviteWidget :visible="inviteVisible" :inviter-username="inviterUsername" @accept="onInviteAccept"
+      @decline="onInviteDecline" />
   </div>
 </template>

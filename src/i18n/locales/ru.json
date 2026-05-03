@@ -4,7 +4,8 @@
     "guest": "Гость",
     "themeLight": "Светлая тема",
     "themeDark": "Тёмная тема",
-    "settings": "Настройки"
+    "settings": "Настройки",
+    "logout": "Выйти"
   },
   "authPage": {
     "infoTitle": "Добро пожаловать на Bugchess",
@@ -22,7 +23,8 @@
     "errorAllFieldsRequired": "Все поля обязательные",
     "errorLoginFailed": "Неудачный вход. Пожалуйста, попробуйте ещё раз.",
     "errorPasswordMismatch": "Пароли не совпадают",
-    "errorRegisterFailed": "Неудачная регистрация. Пожалуйста, попробуйте ещё раз."
+    "errorRegisterFailed": "Неудачная регистрация. Пожалуйста, попробуйте ещё раз.",
+    "successRegister": "Регистрация прошла успешно"
   },
   "home": {
     "inLobby": "У вас уже есть активное лобби",
@@ -42,7 +44,10 @@
     "textSeconds": "Добавление секунд на ход"
   },
   "lobby": {
+    "leader": "Лидер",
+    "you": "Вы",
     "invitePlayer": "Пригласить...",
+    "emptySlot": "Пустой слот",
     "kickConfirm": "Исключить игрока?",
     "kickConfirmYes": "Исключить",
     "kickConfirmNo": "Отмена",
@@ -55,7 +60,8 @@
     "cancelSearch": "Отменить поиск",
     "inviteDialogTitle": "Пригласить игрока",
     "inviteInputLabel": "Имя пользователя",
-    "inviteInputPlaceholder": "Введите ник..."
+    "inviteInputPlaceholder": "Введите ник...",
+    "kicked": "Вас исключили из лобби"
   },
   "serverUnavailable": {
     "title": "Сервер недоступен",
@@ -63,7 +69,15 @@
     "retryBtn": "Попробовать снова"
   },
   "match": {
-    "switchBoard": "Сменить доску"
+    "switchBoard": "Сменить доску",
+    "gameResult": {
+      "win": "Победа",
+      "loss": "Поражение",
+      "draw": "Ничья",
+      "aborted": "Игра отменена"
+    },
+    "resign": "Сдаться",
+    "resignConfirm": "Подтвердить сдачу"
   },
   "chat": {
     "title": "Чат",
@@ -85,5 +99,16 @@
     "save": "Сохранить",
     "saveSuccess": "Профиль обновлён",
     "saveError": "Не удалось сохранить изменения"
+  },
+  "ws": {
+    "connectionLost": "Соединение потеряно. Попытка переподключения...",
+    "connectionFailed": "Не удалось подключиться к серверу после нескольких попыток.",
+    "connectionError": "Произошла ошибка соединения с сервером.",
+    "disconnected": "Соединение с сервером разорвано.",
+    "disconnectedWithReason": "Соединение с сервером разорвано. Причина: {reason}",
+    "inviteDeclined": "{username} отклонил ваше приглашение",
+    "playerKicked": "{username} был исключён из лобби",
+    "playerLeft": "{username} покинул лобби",
+    "serverError": "Ошибка сервера"
   }
 }

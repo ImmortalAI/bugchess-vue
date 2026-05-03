@@ -4,3 +4,7 @@ export type ActionResult = {
   isOk: boolean;
   message: string;
 };
+
+export type ApiErrorResponse = {
+  detail: string;
+};

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { PocketData } from '@/api/chess/chess.model';
 import type { Color } from '@lichess-org/chessground/types';
+import { computed } from 'vue';
 
 interface Props {
   piece: keyof PocketData;
@@ -16,6 +17,8 @@ const emit = defineEmits<{
   pieceMousedown: [event: MouseEvent | TouchEvent];
 }>();
 
+const isActive = computed(() => props.interactive && props.count > 0);
+
 const onInteraction = (e: MouseEvent | TouchEvent) => {
   e.preventDefault();
   emit('pieceMousedown', e);
@@ -27,13 +30,14 @@ const onInteraction = (e: MouseEvent | TouchEvent) => {
     :class="[
       'relative @container',
       props.class ?? 'h-1/5 aspect-square',
-      interactive && 'cursor-grab hover:ring-1 hover:ring-white/40 rounded-sm',
+      isActive && 'cursor-grab hover:ring-1 hover:ring-white/40 rounded-sm',
+      count === 0 && 'opacity-30',
     ]"
   >
     <span
       :class="[piece, color, 'block w-full h-full bg-cover bg-no-repeat']"
-      @mousedown="interactive && onInteraction($event)"
-      @touchstart="interactive && onInteraction($event)"
+      @mousedown="isActive && onInteraction($event)"
+      @touchstart="isActive && onInteraction($event)"
     />
     <span
       v-if="count > 1"

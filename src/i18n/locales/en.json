@@ -4,7 +4,8 @@
     "guest": "Guest",
     "themeLight": "Light theme",
     "themeDark": "Dark theme",
-    "settings": "Settings"
+    "settings": "Settings",
+    "logout": "Log out"
   },
   "authPage": {
     "infoTitle": "Welcome to Bugchess",
@@ -22,7 +23,8 @@
     "errorAllFieldsRequired": "All fields are required",
     "errorLoginFailed": "Login failed. Please try again.",
     "errorPasswordMismatch": "Passwords do not match",
-    "errorRegisterFailed": "Registration failed. Please try again."
+    "errorRegisterFailed": "Registration failed. Please try again.",
+    "successRegister": "Registration successful"
   },
   "home": {
     "inLobby": "You already have an active lobby",
@@ -42,7 +44,10 @@
     "textSeconds": "Increment per move"
   },
   "lobby": {
+    "leader": "Leader",
+    "you": "You",
     "invitePlayer": "Invite...",
+    "emptySlot": "Empty slot",
     "kickConfirm": "Remove player?",
     "kickConfirmYes": "Remove",
     "kickConfirmNo": "Cancel",
@@ -55,7 +60,8 @@
     "cancelSearch": "Cancel Search",
     "inviteDialogTitle": "Invite Player",
     "inviteInputLabel": "Username",
-    "inviteInputPlaceholder": "Enter username..."
+    "inviteInputPlaceholder": "Enter username...",
+    "kicked": "You have been kicked from the lobby"
   },
   "serverUnavailable": {
     "title": "Server Unavailable",
@@ -63,7 +69,15 @@
     "retryBtn": "Try again"
   },
   "match": {
-    "switchBoard": "Switch board"
+    "switchBoard": "Switch board",
+    "gameResult": {
+      "win": "Victory",
+      "loss": "Defeat",
+      "draw": "Draw",
+      "aborted": "Aborted"
+    },
+    "resign": "Resign",
+    "resignConfirm": "Confirm resign"
   },
   "chat": {
     "title": "Chat",
@@ -85,5 +99,16 @@
     "save": "Save",
     "saveSuccess": "Profile updated",
     "saveError": "Failed to save changes"
+  },
+  "ws": {
+    "connectionLost": "Connection lost. Attempting to reconnect...",
+    "connectionFailed": "Failed to connect to the game server after multiple attempts.",
+    "connectionError": "An error occurred with the game server.",
+    "disconnected": "Disconnected from the game server.",
+    "disconnectedWithReason": "Disconnected from the game server. Reason: {reason}",
+    "inviteDeclined": "{username} declined your invite",
+    "playerKicked": "{username} was kicked from the lobby",
+    "playerLeft": "{username} left the lobby",
+    "serverError": "Server error"
   }
 }

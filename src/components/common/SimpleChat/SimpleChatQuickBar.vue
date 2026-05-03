@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { useTemplateRef } from 'vue';
+
 defineProps<{
   messages: string[];
   disabled?: boolean;
@@ -7,10 +9,18 @@ defineProps<{
 const emit = defineEmits<{
   select: [message: string];
 }>();
+
+const barRef = useTemplateRef<HTMLDivElement>('bar');
+
+const onWheel = (e: WheelEvent) => {
+  if (!barRef.value) return;
+  e.preventDefault();
+  barRef.value.scrollLeft += e.deltaY + e.deltaX;
+};
 </script>
 
 <template>
-  <div class="quick-bar flex gap-2 overflow-x-auto px-1 py-0.5">
+  <div ref="bar" class="quick-bar flex gap-2 overflow-x-auto px-1 py-0.5" @wheel="onWheel">
     <button
       v-for="(msg, i) in messages"
       :key="i"

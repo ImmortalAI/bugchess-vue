@@ -45,9 +45,10 @@ export default defineConfig(({ mode }) => {
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+        navigateFallbackDenylist: [/^\/api\//],
         runtimeCaching: [
           {
-            urlPattern: /^https:\/\/.*\/api\//,
+            urlPattern: ({ url }) => url.pathname.startsWith('/api/'),
             handler: 'NetworkOnly',
           },
         ],
@@ -67,6 +68,7 @@ export default defineConfig(({ mode }) => {
           '/api': {
             target: env.VITE_API_PROXY_URL,
             changeOrigin: true,
+            ws: true,
           },
         },
       }

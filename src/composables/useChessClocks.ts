@@ -146,6 +146,34 @@ export function useChessClocks() {
     }
   }
 
+  /**
+   * Advance the clock for a board after a move.
+   * Clocks only begin ticking once Black has made their first reply (fullmoves > 1).
+   * Before that threshold neither clock is active, so toggle() would be a no-op —
+   * instead we start the current-turn clock explicitly once the threshold is crossed.
+   * @param board - Which board's pair of clocks to advance.
+   * @param fullmoves - Full-move counter from the position after the move was played.
+   * @param turn - Side to move after the move was played.
+   */
+  function advance(board: 'main' | 'mate', fullmoves: number, turn: 'white' | 'black') {
+    const w: ClockId = board === 'main' ? 'mainWhite' : 'mateWhite';
+    const b: ClockId = board === 'main' ? 'mainBlack' : 'mateBlack';
+    if (!clocks[w].active && !clocks[b].active) {
+      if (fullmoves <= 1) return;
+      const id: ClockId =
+        board === 'main'
+          ? turn === 'white'
+            ? 'mainWhite'
+            : 'mainBlack'
+          : turn === 'white'
+            ? 'mateWhite'
+            : 'mateBlack';
+      start(id);
+    } else {
+      toggle(board);
+    }
+  }
+
   /** Stop all clocks and zero their remaining time. */
   function clear() {
     pauseLoop();
@@ -155,5 +183,5 @@ export function useChessClocks() {
     }
   }
 
-  return { clocks, start, stop, reset, resetAll, sync, toggle, clear };
+  return { clocks, start, stop, reset, resetAll, sync, toggle, advance, clear };
 }

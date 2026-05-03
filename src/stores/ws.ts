@@ -5,6 +5,7 @@ import { toast } from 'vue-sonner';
 import { useGameStore } from './game';
 import { useSessionStore } from './session';
 import { useLobbyStore } from './lobby';
+import { useTranslation } from '@/composables/useTranslation';
 import {
   WsMsgType,
   type WsIncomingData,
@@ -21,6 +22,7 @@ export const useWebSocketStore = defineStore('websocket', () => {
   const game = useGameStore();
   const session = useSessionStore();
   const lobby = useLobbyStore();
+  const { t } = useTranslation();
 
   const connect = () => {
     if (instance.value) {
@@ -34,27 +36,27 @@ export const useWebSocketStore = defineStore('websocket', () => {
       heartbeat: {
         message: JSON.stringify({ type: WsMsgType.PING, data: {} }),
         scheduler: (cb) => useIntervalFn(cb, 5000),
-        pongTimeout: 5000,
+        pongTimeout: 1000,
       },
       autoReconnect: {
         delay: 1000,
         retries: (retried) => {
-          if (retried === 1) toast.error('Connection lost. Attempting to reconnect...');
+          if (retried === 1) toast.error(t('ws.connectionLost'));
           return retried < 5;
         },
         onFailed() {
-          toast.error('Failed to connect to the game server after multiple attempts.');
+          toast.error(t('ws.connectionFailed'));
         },
       },
       onConnected() {
         console.log('WebSocket connected to game server.');
       },
       onError(_ws, e) {
-        toast.error('An error occurred with the game server.');
+        toast.error(t('ws.connectionError'));
         console.error('WebSocket error:', e);
       },
       onDisconnected(_ws, e) {
-        toast.error('Disconnected from the game server.' + (e ? ` Reason: ${e.reason}` : ''));
+        toast.error(e?.reason ? t('ws.disconnectedWithReason', { reason: e.reason }) : t('ws.disconnected'));
         console.error('WebSocket disconnected:', e);
       },
       onMessage: processMessage,
@@ -86,16 +88,18 @@ export const useWebSocketStore = defineStore('websocket', () => {
       case WsMsgType.LOBBY_JOIN:
         session.setLobby();
         lobby.setState(data.data);
+        router.push('/lobby');
         break;
       case WsMsgType.LOBBY_KICKED:
         session.setIdle();
         lobby.clear();
+        toast.warning(t('lobby.kicked'));
         break;
       case WsMsgType.INVITE_RECEIVE:
         session.setPendingInvite(data.data.username);
         break;
       case WsMsgType.LOBBY_INVITE_REJECTED:
-        toast.info(`${data.data.username} declined your invite`);
+        toast.info(t('ws.inviteDeclined', { username: data.data.username }));
         break;
       case WsMsgType.LOBBY_CONFIG_UPDATE:
         lobby.updateSettings(data.data);
@@ -116,15 +120,15 @@ export const useWebSocketStore = defineStore('websocket', () => {
         lobby.clearSlot(data.data);
         toast.info(
           reason === 'kick'
-            ? `${username} was kicked from the lobby`
-            : `${username} left the lobby`,
+            ? t('ws.playerKicked', { username })
+            : t('ws.playerLeft', { username }),
         );
         break;
       }
 
       // GAME SERVER
       case WsMsgType.GAME_JOIN:
-        game.setup(data.data, true);
+        game.setup(data.data);
         session.setGame();
         if (router.currentRoute.value.name === 'Lobby') router.push('/match');
         break;
@@ -140,7 +144,7 @@ export const useWebSocketStore = defineStore('websocket', () => {
 
       // ERROR
       case WsMsgType.ERROR:
-        toast.error(data.data.message ?? 'Server error');
+        toast.error(data.data.message ?? t('ws.serverError'));
         router.push('/');
         sendMessage({ type: WsMsgType.REQ_SYNC, data: {} });
         break;
@@ -153,10 +157,16 @@ export const useWebSocketStore = defineStore('websocket', () => {
     instance.value?.send(JSON.stringify(data));
   };
 
+  const disconnect = () => {
+    instance.value?.close();
+    instance.value = null;
+  };
+
   return {
     initialized,
     instance,
     connect,
+    disconnect,
     sendMessage,
   };
 });

@@ -20,6 +20,8 @@ export const useLobbyStore = defineStore('lobby', () => {
   const teamA = ref<LobbyTeam | null>(null);
   /** Slots 2–3: Team B. */
   const teamB = ref<LobbyTeam | null>(null);
+  /** Username of the lobby owner; only they can invite players. */
+  const leader = ref<string | null>(null);
 
   /**
    * Replaces the entire lobby state with the server snapshot.
@@ -35,12 +37,13 @@ export const useLobbyStore = defineStore('lobby', () => {
       return;
     }
 
-    time.value = data.initMs / 60000;
-    increment.value = data.incrMs / 1000;
+    time.value = data.clockTime / 60000;
+    increment.value = data.incr / 1000;
     rated.value = data.rated;
     inQueue.value = data.inQueue;
     teamA.value = [data.slots[0] ?? null, data.slots[1] ?? null] as LobbyTeam;
     teamB.value = [data.slots[2] ?? null, data.slots[3] ?? null] as LobbyTeam;
+    leader.value = data.leader;
   };
 
   /**
@@ -59,6 +62,7 @@ export const useLobbyStore = defineStore('lobby', () => {
     inQueue.value = false;
     teamA.value = null;
     teamB.value = null;
+    leader.value = null;
   };
 
   /**
@@ -99,6 +103,7 @@ export const useLobbyStore = defineStore('lobby', () => {
     inQueue.value = false;
     teamA.value = [ownerSlot, null];
     teamB.value = [null, null];
+    leader.value = ownerSlot?.username ?? null;
   };
 
   /**
@@ -108,8 +113,8 @@ export const useLobbyStore = defineStore('lobby', () => {
    * - `LOBBY_CONFIG_UPDATE` — the lobby leader changed the time control or rated setting
    */
   const updateSettings = (data: LobbyTimeRatingData) => {
-    time.value = data.initMs / 60000;
-    increment.value = data.incrMs / 1000;
+    time.value = data.clockTime / 60000;
+    increment.value = data.incr / 1000;
     rated.value = data.rated;
   };
 
@@ -156,6 +161,7 @@ export const useLobbyStore = defineStore('lobby', () => {
     inQueue,
     teamA,
     teamB,
+    leader,
     setState,
     updateSlot,
     clearSlot,

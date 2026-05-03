@@ -15,10 +15,12 @@ import { ref } from 'vue';
 import { useAuthStore } from '@/stores/auth';
 import { toast } from 'vue-sonner';
 import { useTranslation } from '@/composables/useTranslation';
+import { useWebSocketStore } from '@/stores/ws';
 
 const router = useRouter();
 const auth = useAuthStore();
 const { t } = useTranslation();
+const ws = useWebSocketStore();
 
 const email = ref('');
 const password = ref('');
@@ -34,6 +36,10 @@ const handleSubmit = async () => {
 
   const res = await auth.login({ email: email.value, password: password.value });
   if (res.isOk) {
+    const result = await auth.refresh();
+    if (result.isOk) {
+      ws.connect();
+    }
     router.push('/');
   } else {
     toast.error(res.message || t('authPage.errorLoginFailed'));
@@ -52,25 +58,13 @@ const handleSubmit = async () => {
         <div class="flex flex-col gap-4">
           <div class="flex flex-col gap-2">
             <Label for="email">{{ t('authPage.formEmail') }}</Label>
-            <Input
-              id="email"
-              type="email"
-              :placeholder="t('authPage.formEmail')"
-              autocomplete="email"
-              class="w-full"
-              v-model.trim="email"
-            />
+            <Input id="email" type="email" :placeholder="t('authPage.formEmail')" autocomplete="email" class="w-full"
+              v-model.trim="email" />
           </div>
           <div class="flex flex-col gap-2">
             <Label for="password"> {{ t('authPage.formPassword') }}</Label>
-            <Input
-              id="password"
-              type="password"
-              :placeholder="t('authPage.formPassword')"
-              class="w-full"
-              autocomplete="current-password"
-              v-model="password"
-            />
+            <Input id="password" type="password" :placeholder="t('authPage.formPassword')" class="w-full"
+              autocomplete="current-password" v-model="password" />
           </div>
           <Button type="submit" class="w-full">{{ t('authPage.formLoginSubmit') }}</Button>
           <span v-show="errorMsg" class="text-red-500 animate-shake">{{ errorMsg }}</span>
@@ -80,8 +74,7 @@ const handleSubmit = async () => {
     <CardFooter>
       <div class="flex flex-col gap-2 w-full">
         <Button variant="outline" class="w-full" @click="router.push('/signup')">
-          {{ t('authPage.formRegisterSubmit') }}</Button
-        >
+          {{ t('authPage.formRegisterSubmit') }}</Button>
       </div>
     </CardFooter>
   </Card>

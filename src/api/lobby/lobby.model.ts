@@ -10,9 +10,9 @@ export type LobbyTeam = [LobbyPlayerSlot, LobbyPlayerSlot];
 /** Clock settings shared by lobby creation and config messages. */
 export type LobbyTimeData = {
   /** Starting clock time in milliseconds. */
-  initMs: number;
+  clockTime: number;
   /** Clock increment per move in milliseconds. */
-  incrMs: number;
+  incr: number;
 };
 
 /** Clock settings plus the rated/casual flag. */

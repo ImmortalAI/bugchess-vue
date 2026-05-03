@@ -9,6 +9,9 @@ import personImg from '@/assets/imgs/person.png';
 interface LobbyPlayerProps {
   username?: string;
   canKick?: boolean;
+  canInvite?: boolean;
+  isLeader?: boolean;
+  isMe?: boolean;
 }
 
 const props = defineProps<LobbyPlayerProps>();
@@ -29,7 +32,7 @@ const avatarSrc = computed(() => {
 
 const onClick = () => {
   if (!props.username) {
-    emit('invite');
+    if (props.canInvite) emit('invite');
   } else if (props.canKick) {
     confirmingKick.value = true;
   }
@@ -47,7 +50,8 @@ const cancelKick = () => {
 
 <template>
   <div
-    class="relative w-full h-36 border-2 rounded-md overflow-hidden cursor-pointer select-none"
+    class="relative w-full h-36 border-2 rounded-md overflow-hidden select-none"
+    :class="(!username && canInvite) || (username && canKick) ? 'cursor-pointer' : 'cursor-default'"
     @click="onClick"
   >
     <!-- Player info -->
@@ -61,7 +65,10 @@ const cancelKick = () => {
         <AvatarFallback>{{ props.username?.[0]?.toUpperCase() ?? '?' }}</AvatarFallback>
       </Avatar>
       <span class="text-sm" :class="props.username ? 'font-medium' : 'text-muted-foreground'">
-        {{ props.username ?? t('lobby.invitePlayer') }}
+        {{ props.username ? (props.isMe ? t('lobby.you') : props.username) : (props.canInvite ? t('lobby.invitePlayer') : t('lobby.emptySlot')) }}
+        <span v-if="props.username && props.isLeader" class="text-xs text-muted-foreground font-normal">
+          ({{ t('lobby.leader') }})
+        </span>
       </span>
     </div>
 

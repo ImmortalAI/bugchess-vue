@@ -143,8 +143,6 @@ export type WsGameMoveReceive = WsGameMove & {
   white: number;
   /** Remaining time for black on the moved board, in milliseconds. */
   black: number;
-  /** UTC timestamp of the server update, in milliseconds; used to compensate for network latency. */
-  timestamp: number;
 };
 
 /** A chat message between teammates; plain string content. */
@@ -159,8 +157,8 @@ export type WsGameEndData = {
 
 /** Server error payload. */
 export type WsErrorData = {
-  code?: string;
-  message?: string;
+  code: string | null;
+  message: string | null;
 };
 
 // *** MESSAGE TYPES ***
