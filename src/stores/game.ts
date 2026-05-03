@@ -337,8 +337,8 @@ export const useGameStore = defineStore('game', () => {
     if (data.idx === myBoardIdx.value) {
       moveOpponent(data.move);
 
-      syncClock(colorToClockId('white', 'main'), Math.max(0, data.white));
-      syncClock(colorToClockId('black', 'main'), Math.max(0, data.black));
+      syncClock(colorToClockId('white', 'main'), Math.max(0, data.whiteClockTime));
+      syncClock(colorToClockId('black', 'main'), Math.max(0, data.blackClockTime));
     } else {
       if (!mateApi.value) return;
 
@@ -395,8 +395,8 @@ export const useGameStore = defineStore('game', () => {
       }
 
       updateMateBoardState(lastMove);
-      syncClock(colorToClockId('white', 'mate'), Math.max(0, data.white));
-      syncClock(colorToClockId('black', 'mate'), Math.max(0, data.black));
+      syncClock(colorToClockId('white', 'mate'), Math.max(0, data.whiteClockTime));
+      syncClock(colorToClockId('black', 'mate'), Math.max(0, data.blackClockTime));
 
       advanceClock('mate', mateApi.value.fullmoves, mateApi.value.turn);
     }
