@@ -128,29 +128,24 @@ export const useGameStore = defineStore('game', () => {
     const check = api.value.isCheck();
     const currentSetup = api.value.toSetup();
 
-    const config: Config = {
-      ...mainBoardState.value,
-      fen: makeFen(currentSetup),
-      turnColor,
-      movable: {
-        color: isOurTurn ? myColor : undefined,
-        dests,
-      },
-      check,
-      lastMove,
-    };
-
     const patch: Config = {
       turnColor,
       movable: {
-        color: isOurTurn ? myColor : undefined,
         dests,
       },
       check,
       lastMove,
     };
 
-    mainBoardState.value = config;
+    mainBoardState.value = {
+      ...mainBoardState.value,
+      ...patch,
+      fen: makeFen(currentSetup),
+      movable: {
+        ...mainBoardState.value?.movable,
+        dests,
+      },
+    };
     mainCgApi.value?.set(patch);
   };
 
@@ -537,7 +532,7 @@ export const useGameStore = defineStore('game', () => {
       turnColor,
       movable: {
         free: false,
-        color: isOurTurn ? myColor : undefined,
+        color: myColor,
         dests,
         events: {
           after: move,
