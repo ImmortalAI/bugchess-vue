@@ -556,11 +556,7 @@ export const useGameStore = defineStore('game', () => {
     mateBoardState.value = {
       fen: mateBoard.fen,
       orientation: opponentColor,
-      movable: {
-        free: false,
-        color: undefined,
-        dests: new Map(),
-      },
+      viewOnly: true,
       events: {
         move: (_orig: Key, _dest: Key, capturedPiece?: Piece) => {
           if (capturedPiece) applyMateBoardCapture(capturedPiece);
