@@ -57,4 +57,4 @@ export const colorToClockId = (color: Color, board: 'main' | 'mate'): ClockId =>
       : 'mateBlack';
 
 export const isGameStarted = (setup: { fullmoves: number; turn: Color }) =>
-  setup.fullmoves > 1 || (setup.fullmoves === 1 && setup.turn === 'black');
+  setup.fullmoves > 1;

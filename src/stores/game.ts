@@ -33,7 +33,7 @@ export const useGameStore = defineStore('game', () => {
     start: startClock,
     reset: resetClock,
     sync: syncClock,
-    toggle: toggleClock,
+    advance: advanceClock,
     clear: clearClocks,
   } = useChessClocks();
 
@@ -222,7 +222,7 @@ export const useGameStore = defineStore('game', () => {
     isPromoting.value = false;
 
     updateBoardState([chessIdxToSqr(from), chessIdxToSqr(to)]);
-    toggleClock('main');
+    advanceClock('main', api.value.fullmoves, api.value.turn);
     syncClock(myClockId.value, clocks[myClockId.value].remainingMs + incr.value);
   };
 
@@ -254,7 +254,7 @@ export const useGameStore = defineStore('game', () => {
     // Normal captures are handled by the events.move handler (applyMainBoardCapture).
     playWithPocketRestore(api, { from, to });
     updateBoardState([orig, dest]);
-    toggleClock('main');
+    advanceClock('main', api.value.fullmoves, api.value.turn);
     syncClock(myClockId.value, clocks[myClockId.value].remainingMs + incr.value);
   };
 
@@ -276,7 +276,7 @@ export const useGameStore = defineStore('game', () => {
     if (mainPockets.value) mainPockets.value[moverColor][role as Exclude<Role, 'king'>]--;
 
     updateBoardState([to]);
-    toggleClock('main');
+    advanceClock('main', api.value.fullmoves, api.value.turn);
     syncClock(myClockId.value, clocks[myClockId.value].remainingMs + incr.value);
   };
 
@@ -329,7 +329,7 @@ export const useGameStore = defineStore('game', () => {
       updateBoardState([chessIdxToSqr(parsed.to)]);
     }
 
-    toggleClock('main');
+    advanceClock('main', api.value.fullmoves, api.value.turn);
   };
 
   /** Route an incoming move to the correct board handler. */
@@ -398,7 +398,7 @@ export const useGameStore = defineStore('game', () => {
       syncClock(colorToClockId('white', 'mate'), Math.max(0, data.white));
       syncClock(colorToClockId('black', 'mate'), Math.max(0, data.black));
 
-      toggleClock('mate');
+      advanceClock('mate', mateApi.value.fullmoves, mateApi.value.turn);
     }
   };
 
