@@ -247,9 +247,11 @@ export const useGameStore = defineStore('game', () => {
     // En passant: Chessground fires events.move with an empty destination (no capturedPiece),
     // so we must detect it manually before playWithPocketRestore clears the ep square.
     const isEp = to === api.value.epSquare && api.value.board.get(from)?.role === 'pawn';
-    if (isEp && matePockets.value && mainCgApi.value) {
+    if (isEp && matePockets.value) {
       matePockets.value.partner['pawn']++;
-      mainCgApi.value.setPieces(new Map([[chessIdxToSqr(api.value.epSquare!), undefined]]));
+      const mateColor = mainBoardState.value?.orientation === 'white' ? 'black' : 'white';
+      mateApi.value!.pockets![mateColor]['pawn']++;
+      mainCgApi.value?.setPieces(new Map([[chessIdxToSqr(api.value.epSquare!), undefined]]));
     }
     // Normal captures are handled by the events.move handler (applyMainBoardCapture).
     playWithPocketRestore(api, { from, to });
@@ -307,9 +309,11 @@ export const useGameStore = defineStore('game', () => {
       mainCgApi.value?.move(cgFrom, cgTo);
 
       // En passant move
-      if (isEp && matePockets.value && mainCgApi.value) {
+      if (isEp && matePockets.value) {
+        const myColor = mainBoardState.value?.orientation;
         matePockets.value.opponent['pawn']++;
-        mainCgApi.value.setPieces(new Map([[chessIdxToSqr(api.value.epSquare!), undefined]]));
+        mateApi.value!.pockets![myColor!]['pawn']++;
+        mainCgApi.value?.setPieces(new Map([[chessIdxToSqr(api.value.epSquare!), undefined]]));
       }
 
       // Mark opponent's promoted piece so future captures of it correctly revert to pawn.
