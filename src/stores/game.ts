@@ -240,7 +240,7 @@ export const useGameStore = defineStore('game', () => {
       throw new ChessError('Invalid move keys: ' + orig + ' -> ' + dest);
     }
 
-    if (isFLLine(api.value.turn, dest)) {
+    if (api.value.board.get(from)?.role === 'pawn' && isFLLine(api.value.turn, dest)) {
       promotionMoveCache.value = { from, to };
       isPromoting.value = true;
       return;
