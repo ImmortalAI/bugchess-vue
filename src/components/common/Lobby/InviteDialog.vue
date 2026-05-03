@@ -18,8 +18,10 @@ const inputFocused = ref(false);
 
 const suggestions = computed(() => {
   const trimmed = query.value.trim().toLowerCase();
-  if (!trimmed) return [];
-  return props.users.filter((u) => u.toLowerCase().includes(trimmed));
+  const filtered = trimmed
+    ? props.users.filter((u) => u.toLowerCase().includes(trimmed))
+    : [...props.users];
+  return filtered.sort((a, b) => a.localeCompare(b)).slice(0, 5);
 });
 
 watch(

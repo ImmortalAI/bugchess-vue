@@ -12,7 +12,7 @@ import { useAuthStore } from '@/stores/auth';
 import { useTranslation } from '@/composables/useTranslation';
 import { useDark, useToggle } from '@vueuse/core';
 import { computed } from 'vue';
-import { Languages, LogIn, Moon, Settings, Sun } from 'lucide-vue-next';
+import { Languages, LogIn, LogOut, Moon, Settings, Sun } from 'lucide-vue-next';
 import { useRouter } from 'vue-router';
 
 const props = withDefaults(defineProps<{ grayscale?: boolean }>(), { grayscale: false });
@@ -54,6 +54,10 @@ const avatarSvg = computed(() => multiavatar(displayName.value));
         <DropdownMenuItem @click="router.push('/settings')">
           <Settings class="mr-2 size-4" />
           {{ t('header.settings') }}
+        </DropdownMenuItem>
+        <DropdownMenuItem @click="auth.logout()">
+          <LogOut class="mr-2 size-4" />
+          {{ t('header.logout') }}
         </DropdownMenuItem>
       </template>
 

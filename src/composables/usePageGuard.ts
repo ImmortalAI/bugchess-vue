@@ -7,8 +7,8 @@ export function usePageGuard(requiredState: PlayerState) {
   const router = useRouter();
 
   watch(
-    () => session.initialized,
-    (isInit) => {
+    () => [session.initialized, session.state] as const,
+    ([isInit]) => {
       if (!isInit || session.state === requiredState) return;
 
       if (session.isInGame) router.replace({ name: 'Game' });

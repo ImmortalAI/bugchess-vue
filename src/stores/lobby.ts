@@ -37,8 +37,8 @@ export const useLobbyStore = defineStore('lobby', () => {
       return;
     }
 
-    time.value = data.initSec / 60000;
-    increment.value = data.incrSec / 1000;
+    time.value = data.clockTime / 60000;
+    increment.value = data.incr / 1000;
     rated.value = data.rated;
     inQueue.value = data.inQueue;
     teamA.value = [data.slots[0] ?? null, data.slots[1] ?? null] as LobbyTeam;
@@ -113,8 +113,8 @@ export const useLobbyStore = defineStore('lobby', () => {
    * - `LOBBY_CONFIG_UPDATE` — the lobby leader changed the time control or rated setting
    */
   const updateSettings = (data: LobbyTimeRatingData) => {
-    time.value = data.initSec / 60000;
-    increment.value = data.incrSec / 1000;
+    time.value = data.clockTime / 60000;
+    increment.value = data.incr / 1000;
     rated.value = data.rated;
   };
 

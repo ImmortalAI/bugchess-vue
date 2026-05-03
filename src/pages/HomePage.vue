@@ -56,7 +56,7 @@ const createLobby = (option: QuickGameOption) => {
 
   ws.sendMessage({
     type: WsMsgType.LOBBY_CREATE,
-    data: { initSec: time * 60000, incrSec: increment * 1000 },
+    data: { clockTime: time * 60000, incr: increment * 1000 },
   });
 
   router.push('/lobby');

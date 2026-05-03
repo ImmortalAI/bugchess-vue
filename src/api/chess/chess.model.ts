@@ -16,7 +16,7 @@ export type PlayerData = {
   rating: number;
   color: Color;
   /** Remaining clock time in milliseconds. */
-  clock: number;
+  clockTime: number;
   pocket: PocketData;
 };
 
@@ -39,6 +39,4 @@ export type BughouseData = {
   boards: [BoardData, BoardData];
   /** `null` while the game is in progress. */
   status: 'WinA' | 'WinB' | 'Draw' | 'Abort' | null;
-  /** UTC timestamp of the last server update, in milliseconds. */
-  timestamp: number;
 };

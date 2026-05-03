@@ -4,7 +4,8 @@
     "guest": "Guest",
     "themeLight": "Light theme",
     "themeDark": "Dark theme",
-    "settings": "Settings"
+    "settings": "Settings",
+    "logout": "Log out"
   },
   "authPage": {
     "infoTitle": "Welcome to Bugchess",
@@ -59,7 +60,8 @@
     "cancelSearch": "Cancel Search",
     "inviteDialogTitle": "Invite Player",
     "inviteInputLabel": "Username",
-    "inviteInputPlaceholder": "Enter username..."
+    "inviteInputPlaceholder": "Enter username...",
+    "kicked": "You have been kicked from the lobby"
   },
   "serverUnavailable": {
     "title": "Server Unavailable",
@@ -97,5 +99,16 @@
     "save": "Save",
     "saveSuccess": "Profile updated",
     "saveError": "Failed to save changes"
+  },
+  "ws": {
+    "connectionLost": "Connection lost. Attempting to reconnect...",
+    "connectionFailed": "Failed to connect to the game server after multiple attempts.",
+    "connectionError": "An error occurred with the game server.",
+    "disconnected": "Disconnected from the game server.",
+    "disconnectedWithReason": "Disconnected from the game server. Reason: {reason}",
+    "inviteDeclined": "{username} declined your invite",
+    "playerKicked": "{username} was kicked from the lobby",
+    "playerLeft": "{username} left the lobby",
+    "serverError": "Server error"
   }
 }

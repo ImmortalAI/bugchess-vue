@@ -33,7 +33,7 @@ const isLeader = computed(() => lobby.leader === auth.user?.username);
 const sendConfigUpdate = useDebounceFn(() => {
   ws.sendMessage({
     type: WsMsgType.LOBBY_CONFIG,
-    data: { initSec: lobby.time * 60000, incrSec: lobby.increment * 1000, rated: lobby.rated },
+    data: { clockTime: lobby.time * 60000, incr: lobby.increment * 1000, rated: lobby.rated },
   });
 }, 400);
 
@@ -85,12 +85,11 @@ const sendInvite = (username: string) => {
           <div class="flex flex-col gap-2 justify-end flex-1">
             <LobbyPlayer :username="lobby.teamA?.[0]?.username" :canInvite="isLeader"
               :isLeader="lobby.teamA?.[0]?.username === lobby.leader"
-              :isMe="lobby.teamA?.[0]?.username === auth.user?.username"
-              @invite="openInviteDialog(0)" />
+              :isMe="lobby.teamA?.[0]?.username === auth.user?.username" @invite="openInviteDialog(0)" />
             <LobbyPlayer :username="lobby.teamA?.[1]?.username" :canKick="isLeader" :canInvite="isLeader"
               :isLeader="lobby.teamA?.[1]?.username === lobby.leader"
-              :isMe="lobby.teamA?.[1]?.username === auth.user?.username"
-              @kick="kickPlayer(lobby.teamA?.[1]?.username)" @invite="openInviteDialog(1)" />
+              :isMe="lobby.teamA?.[1]?.username === auth.user?.username" @kick="kickPlayer(lobby.teamA?.[1]?.username)"
+              @invite="openInviteDialog(1)" />
           </div>
         </div>
         <div class="flex flex-col gap-2 flex-1 border border-border rounded-md p-3">
@@ -100,12 +99,12 @@ const sendInvite = (username: string) => {
           <div class="flex flex-col gap-2 justify-end flex-1">
             <LobbyPlayer :username="lobby.teamB?.[0]?.username" :canKick="isLeader" :canInvite="isLeader"
               :isLeader="lobby.teamB?.[0]?.username === lobby.leader"
-              :isMe="lobby.teamB?.[0]?.username === auth.user?.username"
-              @kick="kickPlayer(lobby.teamB?.[0]?.username)" @invite="openInviteDialog(2)" />
+              :isMe="lobby.teamB?.[0]?.username === auth.user?.username" @kick="kickPlayer(lobby.teamB?.[0]?.username)"
+              @invite="openInviteDialog(2)" />
             <LobbyPlayer :username="lobby.teamB?.[1]?.username" :canKick="isLeader" :canInvite="isLeader"
               :isLeader="lobby.teamB?.[1]?.username === lobby.leader"
-              :isMe="lobby.teamB?.[1]?.username === auth.user?.username"
-              @kick="kickPlayer(lobby.teamB?.[1]?.username)" @invite="openInviteDialog(3)" />
+              :isMe="lobby.teamB?.[1]?.username === auth.user?.username" @kick="kickPlayer(lobby.teamB?.[1]?.username)"
+              @invite="openInviteDialog(3)" />
           </div>
         </div>
       </div>

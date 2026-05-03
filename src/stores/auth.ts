@@ -6,6 +6,9 @@ import { usersMe } from '@/api/users/users.service';
 import { isAxiosError } from 'axios';
 import { defineStore } from 'pinia';
 import { computed, ref } from 'vue';
+import { useGameStore } from './game';
+import { useLobbyStore } from './lobby';
+import { useWebSocketStore } from './ws';
 
 export const useAuthStore = defineStore('auth', () => {
   const user = ref<UserData | null>(null);
@@ -69,6 +72,9 @@ export const useAuthStore = defineStore('auth', () => {
     try {
       const message = await authLogout();
       user.value = null;
+      useGameStore().clear();
+      useLobbyStore().clear();
+      useWebSocketStore().disconnect();
       return { isOk: true, message };
     } catch (e) {
       if (isAxiosError(e))
@@ -84,6 +90,9 @@ export const useAuthStore = defineStore('auth', () => {
     try {
       const message = await authLogoutAll();
       user.value = null;
+      useGameStore().clear();
+      useLobbyStore().clear();
+      useWebSocketStore().disconnect();
       return { isOk: true, message };
     } catch (e) {
       if (isAxiosError(e))

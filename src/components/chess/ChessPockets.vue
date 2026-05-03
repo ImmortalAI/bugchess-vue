@@ -39,7 +39,6 @@ const isHorizontal = computed(() => props.orientation === 'horizontal');
   >
     <template v-for="p in pieces" :key="p">
       <DraggablePiece
-        v-if="data[p] > 0"
         :piece="p"
         :color="props.color"
         :count="data[p]"
@@ -64,7 +63,6 @@ const isHorizontal = computed(() => props.orientation === 'horizontal');
     <div v-if="dataOpponent" class="flex flex-col h-1/2">
       <template v-for="p in pieces" :key="p">
         <DraggablePiece
-          v-if="dataOpponent[p] > 0"
           :piece="p"
           :color="colorOpponent"
           :count="dataOpponent[p]"
@@ -75,7 +73,6 @@ const isHorizontal = computed(() => props.orientation === 'horizontal');
     <div :class="dataOpponent ? 'flex flex-col-reverse h-1/2' : 'flex flex-col-reverse h-full'">
       <template v-for="p in pieces" :key="p">
         <DraggablePiece
-          v-if="data[p] > 0"
           :piece="p"
           :color="props.color"
           :count="data[p]"
