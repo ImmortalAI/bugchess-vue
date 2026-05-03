@@ -531,6 +531,7 @@ export const useGameStore = defineStore('game', () => {
       orientation: myColor,
       turnColor,
       movable: {
+        free: false,
         color: isOurTurn ? myColor : undefined,
         dests,
         events: {
