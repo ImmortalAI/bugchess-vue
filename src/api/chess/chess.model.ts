@@ -39,4 +39,6 @@ export type BughouseData = {
   boards: [BoardData, BoardData];
   /** `null` while the game is in progress. */
   status: 'WinA' | 'WinB' | 'Draw' | 'Abort' | null;
+  /** Time increment per move in milliseconds since the Unix epoch, in UTC.*/
+  incr: number;
 };

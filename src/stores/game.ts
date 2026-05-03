@@ -50,6 +50,7 @@ export const useGameStore = defineStore('game', () => {
   const isPromoting = ref(false);
   const promotionMoveCache = ref<{ from: Square; to: Square } | null>(null);
   const lastChatMessage = ref<ChatMessage | null>(null);
+  const incr = ref(0);
 
   // Pockets on the main board — tracked separately for Vue reactivity
   // (chessops mutates them in-place which shallowRef won't detect).
@@ -222,6 +223,7 @@ export const useGameStore = defineStore('game', () => {
 
     updateBoardState([chessIdxToSqr(from), chessIdxToSqr(to)]);
     toggleClock('main');
+    syncClock(myClockId.value, clocks[myClockId.value].remainingMs + incr.value);
   };
 
   const move = (orig: Key, dest: Key) => {
@@ -253,6 +255,7 @@ export const useGameStore = defineStore('game', () => {
     playWithPocketRestore(api, { from, to });
     updateBoardState([orig, dest]);
     toggleClock('main');
+    syncClock(myClockId.value, clocks[myClockId.value].remainingMs + incr.value);
   };
 
   const drop = (role: Role, to: Key) => {
@@ -274,6 +277,7 @@ export const useGameStore = defineStore('game', () => {
 
     updateBoardState([to]);
     toggleClock('main');
+    syncClock(myClockId.value, clocks[myClockId.value].remainingMs + incr.value);
   };
 
   const moveOpponent = (uci: string) => {
@@ -433,6 +437,7 @@ export const useGameStore = defineStore('game', () => {
     }
 
     gameStatus.value = data.status;
+    incr.value = data.incr;
 
     // Find this user's board and player slot indices.
     const myUsername = useAuthStore().user?.username;
@@ -570,6 +575,7 @@ export const useGameStore = defineStore('game', () => {
     isPromoting.value = false;
     promotionMoveCache.value = null;
     lastChatMessage.value = null;
+    incr.value = 0;
     mainPockets.value = null;
     matePockets.value = null;
     players.value = null;
