@@ -3,13 +3,14 @@ import { ChessError } from '@/utils/chessError';
 import {
   chessIdxToSqr,
   colorToClockId,
+  copyPocket,
+  getEnPassantCaptureSquare,
   isFLLine,
   isGameStarted,
 } from '@/utils/chessOpsGroundUtils';
 import type { Config } from '@lichess-org/chessground/config';
 import type { File, Key, Piece } from '@lichess-org/chessground/types';
 import { makeFen, parseFen } from 'chessops/fen';
-import { Material } from 'chessops/setup';
 import { makeUci, parseUci } from 'chessops/util';
 import type { Color, Move, Role, Square } from 'chessops/types';
 import { parseSquare } from 'chessops/util';
@@ -492,21 +493,13 @@ export const useGameStore = defineStore('game', () => {
     if (parsedFen.isErr) throw new ChessError('Invalid FEN: ' + myBoard.fen);
     const fenSetup = parsedFen.value;
 
-    const pockets = Material.empty();
-    Object.assign(pockets[myColor], me.pocket);
-    Object.assign(pockets[opponentColor], opponent.pocket);
-    fenSetup.pockets = pockets;
-
     api.value = Crazyhouse.fromSetup(fenSetup).unwrap();
+    if (!api.value.pockets) throw new ChessError('Missing pockets in FEN: ' + myBoard.fen);
 
-    // Set up pockets for both boards.
+    // Set up main board pockets from the chessops state initialized from FEN.
     mainPockets.value = {
-      white: { ...(myColor === 'white' ? me.pocket : opponent.pocket) },
-      black: { ...(myColor === 'black' ? me.pocket : opponent.pocket) },
-    };
-    matePockets.value = {
-      partner: { ...partner.pocket },
-      opponent: { ...partnerEnemy.pocket },
+      white: copyPocket(api.value.pockets.white),
+      black: copyPocket(api.value.pockets.black),
     };
 
     // Set up the mate board chessops instance.
@@ -514,12 +507,14 @@ export const useGameStore = defineStore('game', () => {
     if (parsedMateFen.isErr) throw new ChessError('Invalid mate FEN: ' + mateBoard.fen);
     const mateFenSetup = parsedMateFen.value;
 
-    const matePocketsForApi = Material.empty();
-    Object.assign(matePocketsForApi[partner.color], partner.pocket);
-    Object.assign(matePocketsForApi[partnerEnemy.color], partnerEnemy.pocket);
-    mateFenSetup.pockets = matePocketsForApi;
-
     mateApi.value = Crazyhouse.fromSetup(mateFenSetup).unwrap();
+    if (!mateApi.value.pockets) throw new ChessError('Missing pockets in FEN: ' + mateBoard.fen);
+
+    // Set up mate board pockets from the chessops state initialized from FEN.
+    matePockets.value = {
+      partner: copyPocket(mateApi.value.pockets[partner.color]),
+      opponent: copyPocket(mateApi.value.pockets[partnerEnemy.color]),
+    };
 
     const mainTurnColor = isGameStarted(fenSetup) ? fenSetup.turn : null;
     const mateTurnColor = isGameStarted(mateFenSetup) ? mateFenSetup.turn : null;

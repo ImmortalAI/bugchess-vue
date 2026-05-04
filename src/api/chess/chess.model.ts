@@ -1,14 +1,13 @@
 import type { Color, Key } from '@lichess-org/chessground/types';
 import { Chessground } from '@lichess-org/chessground';
+import type { Role } from 'chessops/types';
+import type { MaterialSide } from 'chessops/setup';
 
 /** Chessground API instance returned by the Chessground constructor. */
 export type CgApi = ReturnType<typeof Chessground>;
 
-/** Piece type that can be held in a pocket (all pieces except the King). Keys match the Role type from chessops/types. */
-export type ChessPiece = 'pawn' | 'knight' | 'bishop' | 'rook' | 'queen';
-
 /** Number of each piece type currently available for a drop move. */
-export type PocketData = Record<ChessPiece, number>;
+export type PocketData = Pick<MaterialSide, Exclude<Role, 'king'>>;
 
 /** State of one player on a board: identity, clock, and pocket. */
 export type PlayerData = {
@@ -17,7 +16,6 @@ export type PlayerData = {
   color: Color;
   /** Remaining clock time in milliseconds. */
   clockTime: number;
-  pocket: PocketData;
 };
 
 /** Complete snapshot of one of the two Bughouse boards. */

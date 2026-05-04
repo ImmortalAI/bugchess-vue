@@ -3,6 +3,7 @@ import { SquareSet } from 'chessops/squareSet';
 import type { Color, Square } from 'chessops/types';
 import { makeSquare, parseSquare } from 'chessops/util';
 import type { ClockId } from '@/composables/useChessClocks';
+import type { PocketData } from '@/api/chess/chess.model';
 import { ChessError } from './chessError';
 
 export function chessIdxToSqr(indexes: Square): Key;
@@ -62,3 +63,10 @@ export const isGameStarted = (setup: { fullmoves: number; turn: Color }) =>
 export const getEnPassantCaptureSquare = (to: Square, color: Color): Square =>
   to + (color === 'white' ? -8 : 8);
 
+export const copyPocket = (pocket: PocketData): PocketData => ({
+  pawn: pocket.pawn,
+  knight: pocket.knight,
+  bishop: pocket.bishop,
+  rook: pocket.rook,
+  queen: pocket.queen,
+});
