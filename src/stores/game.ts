@@ -247,11 +247,12 @@ export const useGameStore = defineStore('game', () => {
     // En passant: Chessground fires events.move with an empty destination (no capturedPiece),
     // so we must detect it manually before playWithPocketRestore clears the ep square.
     const isEp = to === api.value.epSquare && api.value.board.get(from)?.role === 'pawn';
-    if (isEp && matePockets.value) {
+    const epCaptureSquare = isEp ? getEnPassantCaptureSquare(to, api.value.turn) : null;
+    if (epCaptureSquare !== null && matePockets.value) {
       matePockets.value.partner['pawn']++;
       const mateColor = mainBoardState.value?.orientation === 'white' ? 'black' : 'white';
       mateApi.value!.pockets![mateColor]['pawn']++;
-      mainCgApi.value?.setPieces(new Map([[chessIdxToSqr(api.value.epSquare!), undefined]]));
+      mainCgApi.value?.setPieces(new Map([[chessIdxToSqr(epCaptureSquare), undefined]]));
     }
     // Normal captures are handled by the events.move handler (applyMainBoardCapture).
     playWithPocketRestore(api, { from, to });
@@ -300,6 +301,7 @@ export const useGameStore = defineStore('game', () => {
       // so detect it manually before playWithPocketRestore clears the ep square.
       const isEp =
         parsed.to === api.value.epSquare && api.value.board.get(parsed.from)?.role === 'pawn';
+      const epCaptureSquare = isEp ? getEnPassantCaptureSquare(parsed.to, moverColor) : null;
 
       // Normal captures are handled by the events.move handler (applyMainBoardCapture).
       playWithPocketRestore(api, parsed);
@@ -309,11 +311,11 @@ export const useGameStore = defineStore('game', () => {
       mainCgApi.value?.move(cgFrom, cgTo);
 
       // En passant move
-      if (isEp && matePockets.value) {
+      if (epCaptureSquare !== null && matePockets.value) {
         const myColor = mainBoardState.value?.orientation;
         matePockets.value.opponent['pawn']++;
         mateApi.value!.pockets![myColor!]['pawn']++;
-        mainCgApi.value?.setPieces(new Map([[chessIdxToSqr(api.value.epSquare!), undefined]]));
+        mainCgApi.value?.setPieces(new Map([[chessIdxToSqr(epCaptureSquare), undefined]]));
       }
 
       // Mark opponent's promoted piece so future captures of it correctly revert to pawn.
@@ -362,6 +364,9 @@ export const useGameStore = defineStore('game', () => {
         const isEp =
           parsed.to === mateApi.value.epSquare &&
           mateApi.value.board.get(parsed.from)?.role === 'pawn';
+        const epCaptureSquare = isEp
+          ? getEnPassantCaptureSquare(parsed.to, mateApi.value.turn)
+          : null;
         if (isEp) {
           applyMateBoardCapture({
             role: 'pawn',
@@ -372,6 +377,8 @@ export const useGameStore = defineStore('game', () => {
         playWithPocketRestore(mateApi, parsed);
         // Animate the move — fires events.move with capturedPiece for normal captures.
         mateCgApi.value?.move(cgFrom, cgTo);
+        if (epCaptureSquare !== null)
+          mateCgApi.value?.setPieces(new Map([[chessIdxToSqr(epCaptureSquare), undefined]]));
 
         // Mark promoted piece so future captures of it revert to pawn.
         if (parsed.promotion) {
