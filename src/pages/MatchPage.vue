@@ -9,9 +9,8 @@ import { useGameStore } from '@/stores/game';
 import { useSessionStore } from '@/stores/session';
 import { breakpointsTailwind, useBreakpoints } from '@vueuse/core';
 import { ArrowLeftRight } from 'lucide-vue-next';
-import { computed, onBeforeUnmount, ref, shallowRef, watch } from 'vue';
+import { computed, onBeforeUnmount, ref } from 'vue';
 import type { Color } from '@lichess-org/chessground/types';
-import type { CgApi } from '@/api/chess/chess.model';
 import PlayerPanel from '@/components/chess/PlayerPanel.vue';
 import ChessClock from '@/components/chess/ChessClock.vue';
 
@@ -47,37 +46,6 @@ const mobileTopPlayer = computed(() =>
 const mobileTopClockId = computed(() =>
   boardReversed.value ? game.enemyClockId : game.opponentClockId,
 );
-const mobileBottomClockId = computed(() =>
-  boardReversed.value ? game.partnerClockId : game.myClockId,
-);
-const mobileBoardConfig = computed(() =>
-  boardReversed.value ? game.mateBoardState : game.mainBoardState,
-);
-const mobilePockets = computed(() =>
-  boardReversed.value ? game.matePockets?.partner : mainMyPocket.value,
-);
-const mobilePocketsOpponent = computed(() =>
-  boardReversed.value ? game.matePockets?.opponent : mainOpponentPocket.value,
-);
-
-// Single Chessground instance shared by the mobile board — re-registered when switching views.
-const mobileCgApi = shallowRef<CgApi | null>(null);
-
-const onMobileBoardReady = (cgApi: CgApi) => {
-  mobileCgApi.value = cgApi;
-  game.registerMainBoard(cgApi);
-};
-
-watch(boardReversed, (reversed) => {
-  if (!mobileCgApi.value) return;
-  if (reversed) {
-    game.unregisterMainBoard();
-    game.registerMateBoard(mobileCgApi.value);
-  } else {
-    game.unregisterMateBoard();
-    game.registerMainBoard(mobileCgApi.value);
-  }
-});
 
 onBeforeUnmount(() => {
   game.unregisterMainBoard();
@@ -99,49 +67,48 @@ const quickMessages = [
 
 <template>
   <!-- Mobile layout -->
-  <div
-    v-if="isMobile"
-    class="w-full h-full flex flex-col gap-2 py-2 overflow-y-auto"
-    :class="{ invisible: !session.initialized }"
-  >
+  <div v-if="isMobile" class="w-full h-full flex flex-col gap-2 py-2 overflow-y-auto"
+    :class="{ invisible: !session.initialized }">
     <!-- Top player info -->
-    <PlayerPanel
-      :username="mobileTopPlayer?.username ?? '...'"
-      :remaining-ms="game.clocks[mobileTopClockId].remainingMs"
-      :clock-active="game.clocks[mobileTopClockId].active"
-      :show-clock="false"
-      class="px-2"
-    />
+    <PlayerPanel :username="mobileTopPlayer?.username ?? '...'"
+      :remaining-ms="game.clocks[mobileTopClockId].remainingMs" :clock-active="game.clocks[mobileTopClockId].active"
+      :show-clock="false" class="px-2" />
 
-    <!-- Board with pockets and clocks inside slots -->
-    <ChessBoard
-      class="w-full"
-      class-board="w-full aspect-square"
-      class-pocket-row="px-2"
-      :config="mobileBoardConfig"
-      :is-promoting="!boardReversed && game.isPromoting"
-      :promotion-color="game.promotionColor"
-      :promotion-file="game.promotionFile"
-      pockets-orientation="horizontal"
-      :pockets-interactive="!boardReversed"
-      :pockets="mobilePockets"
-      :pockets-opponent="mobilePocketsOpponent"
-      @ready="onMobileBoardReady"
-      @promotion-select="game.promote"
-    >
-      <template #pocket-top-extra>
-        <ChessClock
-          :remaining-ms="game.clocks[mobileTopClockId].remainingMs"
-          :active="game.clocks[mobileTopClockId].active"
-        />
-      </template>
-      <template #pocket-bottom-extra>
-        <ChessClock
-          :remaining-ms="game.clocks[mobileBottomClockId].remainingMs"
-          :active="game.clocks[mobileBottomClockId].active"
-        />
-      </template>
-    </ChessBoard>
+    <!-- Both boards stay mounted so Chessground events.move keeps pocket sync working. -->
+    <div class="w-full">
+      <div :class="{ hidden: boardReversed }">
+        <ChessBoard class="w-full" class-board="w-full aspect-square" class-pocket-row="px-2"
+          :config="game.mainBoardState" :is-promoting="game.isPromoting" :promotion-color="game.promotionColor"
+          :promotion-file="game.promotionFile" pockets-orientation="horizontal" pockets-interactive
+          :pockets="mainMyPocket" :pockets-opponent="mainOpponentPocket" @ready="game.registerMainBoard"
+          @promotion-select="game.promote">
+          <template #pocket-top-extra>
+            <ChessClock :remaining-ms="game.clocks[game.opponentClockId].remainingMs"
+              :active="game.clocks[game.opponentClockId].active" />
+          </template>
+          <template #pocket-bottom-extra>
+            <ChessClock :remaining-ms="game.clocks[game.myClockId].remainingMs"
+              :active="game.clocks[game.myClockId].active" />
+          </template>
+        </ChessBoard>
+      </div>
+
+      <div :class="{ hidden: !boardReversed }">
+        <ChessBoard class="w-full" class-board="w-full aspect-square" class-pocket-row="px-2"
+          :config="game.mateBoardState" :is-promoting="false" :pockets="game.matePockets?.partner"
+          :pockets-opponent="game.matePockets?.opponent" pockets-orientation="horizontal"
+          @ready="game.registerMateBoard">
+          <template #pocket-top-extra>
+            <ChessClock :remaining-ms="game.clocks[game.enemyClockId].remainingMs"
+              :active="game.clocks[game.enemyClockId].active" />
+          </template>
+          <template #pocket-bottom-extra>
+            <ChessClock :remaining-ms="game.clocks[game.partnerClockId].remainingMs"
+              :active="game.clocks[game.partnerClockId].active" />
+          </template>
+        </ChessBoard>
+      </div>
+    </div>
 
     <!-- Switch board (full width) -->
     <Button variant="outline" class="mx-2 gap-2" @click="onSwitchBoard">
@@ -150,90 +117,43 @@ const quickMessages = [
     </Button>
 
     <!-- Mobile game controls: chat + resign + result -->
-    <GameCtrlPanel
-      class="px-2"
-      :last-message="game.lastChatMessage"
-      :game-status="game.gameStatus"
-      :my-board-idx="game.myBoardIdx"
-      :quick-messages="quickMessages"
-      @send="matchNewMsg"
-      @resign="game.resign()"
-    />
+    <GameCtrlPanel class="px-2" :last-message="game.lastChatMessage" :game-status="game.gameStatus"
+      :my-board-idx="game.myBoardIdx" :quick-messages="quickMessages" @send="matchNewMsg" @resign="game.resign()" />
   </div>
 
   <!-- Desktop layout -->
-  <div
-    v-else
-    class="w-full h-full flex justify-center items-center gap-4"
-    :class="{ invisible: !session.initialized }"
-  >
+  <div v-else class="w-full h-full flex justify-center items-center gap-4" :class="{ invisible: !session.initialized }">
     <!-- Left panel: player info + main board -->
     <div class="flex gap-2 items-center">
       <div class="flex flex-col justify-between h-(--cg-height) py-1">
-        <PlayerPanel
-          :username="game.players?.opponent.username ?? '...'"
+        <PlayerPanel :username="game.players?.opponent.username ?? '...'"
           :remaining-ms="game.clocks[game.opponentClockId].remainingMs"
-          :clock-active="game.clocks[game.opponentClockId].active"
-          clock-position="bottom"
-        />
-        <PlayerPanel
-          :username="game.players?.me.username ?? '...'"
-          :remaining-ms="game.clocks[game.myClockId].remainingMs"
-          :clock-active="game.clocks[game.myClockId].active"
-          clock-position="top"
-        />
+          :clock-active="game.clocks[game.opponentClockId].active" clock-position="bottom" />
+        <PlayerPanel :username="game.players?.me.username ?? '...'"
+          :remaining-ms="game.clocks[game.myClockId].remainingMs" :clock-active="game.clocks[game.myClockId].active"
+          clock-position="top" />
       </div>
-      <ChessBoard
-        class-board="w-(--cg-width) h-(--cg-height)"
-        :config="game.mainBoardState"
-        :is-promoting="game.isPromoting"
-        :promotion-color="game.promotionColor"
-        :promotion-file="game.promotionFile"
-        :pockets="mainMyPocket"
-        :pockets-opponent="mainOpponentPocket"
-        pockets-orientation="vertical"
-        pockets-interactive
-        resizable
-        @ready="game.registerMainBoard"
-        @promotion-select="game.promote"
-      />
+      <ChessBoard class-board="w-(--cg-width) h-(--cg-height)" :config="game.mainBoardState"
+        :is-promoting="game.isPromoting" :promotion-color="game.promotionColor" :promotion-file="game.promotionFile"
+        :pockets="mainMyPocket" :pockets-opponent="mainOpponentPocket" pockets-orientation="vertical"
+        pockets-interactive resizable @ready="game.registerMainBoard" @promotion-select="game.promote" />
     </div>
 
     <!-- Right panel: mate board + player info + chat -->
     <div class="flex flex-col gap-2">
-      <ChessBoard
-        class-board="size-96"
-        :config="game.mateBoardState"
-        :is-promoting="false"
-        :pockets="game.matePockets?.partner"
-        :pockets-opponent="game.matePockets?.opponent"
-        pockets-orientation="vertical"
-        @ready="game.registerMateBoard"
-      />
+      <ChessBoard class-board="size-96" :config="game.mateBoardState" :is-promoting="false"
+        :pockets="game.matePockets?.partner" :pockets-opponent="game.matePockets?.opponent"
+        pockets-orientation="vertical" @ready="game.registerMateBoard" />
       <div class="flex gap-2 px-1">
-        <PlayerPanel
-          :username="game.players?.partner.username ?? '...'"
+        <PlayerPanel :username="game.players?.partner.username ?? '...'"
           :remaining-ms="game.clocks[game.partnerClockId].remainingMs"
-          :clock-active="game.clocks[game.partnerClockId].active"
-          class="flex-1 min-w-0"
-        />
-        <PlayerPanel
-          :username="game.players?.enemy.username ?? '...'"
+          :clock-active="game.clocks[game.partnerClockId].active" class="flex-1 min-w-0" />
+        <PlayerPanel :username="game.players?.enemy.username ?? '...'"
           :remaining-ms="game.clocks[game.enemyClockId].remainingMs"
-          :clock-active="game.clocks[game.enemyClockId].active"
-          clock-position="inline-start"
-          class="flex-1 min-w-0"
-        />
+          :clock-active="game.clocks[game.enemyClockId].active" clock-position="inline-start" class="flex-1 min-w-0" />
       </div>
-      <GameCtrlPanel
-        class="w-96"
-        :last-message="game.lastChatMessage"
-        :game-status="game.gameStatus"
-        :my-board-idx="game.myBoardIdx"
-        :quick-messages="quickMessages"
-        @send="matchNewMsg"
-        @resign="game.resign()"
-      />
+      <GameCtrlPanel class="w-96" :last-message="game.lastChatMessage" :game-status="game.gameStatus"
+        :my-board-idx="game.myBoardIdx" :quick-messages="quickMessages" @send="matchNewMsg" @resign="game.resign()" />
     </div>
   </div>
 </template>

@@ -3,13 +3,14 @@ import { ChessError } from '@/utils/chessError';
 import {
   chessIdxToSqr,
   colorToClockId,
+  copyPocket,
+  getEnPassantCaptureSquare,
   isFLLine,
   isGameStarted,
 } from '@/utils/chessOpsGroundUtils';
 import type { Config } from '@lichess-org/chessground/config';
 import type { File, Key, Piece } from '@lichess-org/chessground/types';
 import { makeFen, parseFen } from 'chessops/fen';
-import { Material } from 'chessops/setup';
 import { makeUci, parseUci } from 'chessops/util';
 import type { Color, Move, Role, Square } from 'chessops/types';
 import { parseSquare } from 'chessops/util';
@@ -128,29 +129,24 @@ export const useGameStore = defineStore('game', () => {
     const check = api.value.isCheck();
     const currentSetup = api.value.toSetup();
 
-    const config: Config = {
-      ...mainBoardState.value,
-      fen: makeFen(currentSetup),
-      turnColor,
-      movable: {
-        color: isOurTurn ? myColor : undefined,
-        dests,
-      },
-      check,
-      lastMove,
-    };
-
     const patch: Config = {
       turnColor,
       movable: {
-        color: isOurTurn ? myColor : undefined,
         dests,
       },
       check,
       lastMove,
     };
 
-    mainBoardState.value = config;
+    mainBoardState.value = {
+      ...mainBoardState.value,
+      ...patch,
+      fen: makeFen(currentSetup),
+      movable: {
+        ...mainBoardState.value?.movable,
+        dests,
+      },
+    };
     mainCgApi.value?.set(patch);
   };
 
@@ -240,7 +236,7 @@ export const useGameStore = defineStore('game', () => {
       throw new ChessError('Invalid move keys: ' + orig + ' -> ' + dest);
     }
 
-    if (isFLLine(api.value.turn, dest)) {
+    if (api.value.board.get(from)?.role === 'pawn' && isFLLine(api.value.turn, dest)) {
       promotionMoveCache.value = { from, to };
       isPromoting.value = true;
       return;
@@ -252,9 +248,12 @@ export const useGameStore = defineStore('game', () => {
     // En passant: Chessground fires events.move with an empty destination (no capturedPiece),
     // so we must detect it manually before playWithPocketRestore clears the ep square.
     const isEp = to === api.value.epSquare && api.value.board.get(from)?.role === 'pawn';
-    if (isEp && matePockets.value && mainCgApi.value) {
+    const epCaptureSquare = isEp ? getEnPassantCaptureSquare(to, api.value.turn) : null;
+    if (epCaptureSquare !== null && matePockets.value) {
       matePockets.value.partner['pawn']++;
-      mainCgApi.value.setPieces(new Map([[chessIdxToSqr(api.value.epSquare!), undefined]]));
+      const mateColor = mainBoardState.value?.orientation === 'white' ? 'black' : 'white';
+      mateApi.value!.pockets![mateColor]['pawn']++;
+      mainCgApi.value?.setPieces(new Map([[chessIdxToSqr(epCaptureSquare), undefined]]));
     }
     // Normal captures are handled by the events.move handler (applyMainBoardCapture).
     playWithPocketRestore(api, { from, to });
@@ -303,6 +302,7 @@ export const useGameStore = defineStore('game', () => {
       // so detect it manually before playWithPocketRestore clears the ep square.
       const isEp =
         parsed.to === api.value.epSquare && api.value.board.get(parsed.from)?.role === 'pawn';
+      const epCaptureSquare = isEp ? getEnPassantCaptureSquare(parsed.to, moverColor) : null;
 
       // Normal captures are handled by the events.move handler (applyMainBoardCapture).
       playWithPocketRestore(api, parsed);
@@ -312,9 +312,11 @@ export const useGameStore = defineStore('game', () => {
       mainCgApi.value?.move(cgFrom, cgTo);
 
       // En passant move
-      if (isEp && matePockets.value && mainCgApi.value) {
+      if (epCaptureSquare !== null && matePockets.value) {
+        const myColor = mainBoardState.value?.orientation;
         matePockets.value.opponent['pawn']++;
-        mainCgApi.value.setPieces(new Map([[chessIdxToSqr(api.value.epSquare!), undefined]]));
+        mateApi.value!.pockets![myColor!]['pawn']++;
+        mainCgApi.value?.setPieces(new Map([[chessIdxToSqr(epCaptureSquare), undefined]]));
       }
 
       // Mark opponent's promoted piece so future captures of it correctly revert to pawn.
@@ -363,6 +365,9 @@ export const useGameStore = defineStore('game', () => {
         const isEp =
           parsed.to === mateApi.value.epSquare &&
           mateApi.value.board.get(parsed.from)?.role === 'pawn';
+        const epCaptureSquare = isEp
+          ? getEnPassantCaptureSquare(parsed.to, mateApi.value.turn)
+          : null;
         if (isEp) {
           applyMateBoardCapture({
             role: 'pawn',
@@ -373,6 +378,8 @@ export const useGameStore = defineStore('game', () => {
         playWithPocketRestore(mateApi, parsed);
         // Animate the move — fires events.move with capturedPiece for normal captures.
         mateCgApi.value?.move(cgFrom, cgTo);
+        if (epCaptureSquare !== null)
+          mateCgApi.value?.setPieces(new Map([[chessIdxToSqr(epCaptureSquare), undefined]]));
 
         // Mark promoted piece so future captures of it revert to pawn.
         if (parsed.promotion) {
@@ -486,21 +493,13 @@ export const useGameStore = defineStore('game', () => {
     if (parsedFen.isErr) throw new ChessError('Invalid FEN: ' + myBoard.fen);
     const fenSetup = parsedFen.value;
 
-    const pockets = Material.empty();
-    Object.assign(pockets[myColor], me.pocket);
-    Object.assign(pockets[opponentColor], opponent.pocket);
-    fenSetup.pockets = pockets;
-
     api.value = Crazyhouse.fromSetup(fenSetup).unwrap();
+    if (!api.value.pockets) throw new ChessError('Missing pockets in FEN: ' + myBoard.fen);
 
-    // Set up pockets for both boards.
+    // Set up main board pockets from the chessops state initialized from FEN.
     mainPockets.value = {
-      white: { ...(myColor === 'white' ? me.pocket : opponent.pocket) },
-      black: { ...(myColor === 'black' ? me.pocket : opponent.pocket) },
-    };
-    matePockets.value = {
-      partner: { ...partner.pocket },
-      opponent: { ...partnerEnemy.pocket },
+      white: copyPocket(api.value.pockets.white),
+      black: copyPocket(api.value.pockets.black),
     };
 
     // Set up the mate board chessops instance.
@@ -508,12 +507,14 @@ export const useGameStore = defineStore('game', () => {
     if (parsedMateFen.isErr) throw new ChessError('Invalid mate FEN: ' + mateBoard.fen);
     const mateFenSetup = parsedMateFen.value;
 
-    const matePocketsForApi = Material.empty();
-    Object.assign(matePocketsForApi[partner.color], partner.pocket);
-    Object.assign(matePocketsForApi[partnerEnemy.color], partnerEnemy.pocket);
-    mateFenSetup.pockets = matePocketsForApi;
-
     mateApi.value = Crazyhouse.fromSetup(mateFenSetup).unwrap();
+    if (!mateApi.value.pockets) throw new ChessError('Missing pockets in FEN: ' + mateBoard.fen);
+
+    // Set up mate board pockets from the chessops state initialized from FEN.
+    matePockets.value = {
+      partner: copyPocket(mateApi.value.pockets[partner.color]),
+      opponent: copyPocket(mateApi.value.pockets[partnerEnemy.color]),
+    };
 
     const mainTurnColor = isGameStarted(fenSetup) ? fenSetup.turn : null;
     const mateTurnColor = isGameStarted(mateFenSetup) ? mateFenSetup.turn : null;
@@ -537,7 +538,7 @@ export const useGameStore = defineStore('game', () => {
       turnColor,
       movable: {
         free: false,
-        color: isOurTurn ? myColor : undefined,
+        color: myColor,
         dests,
         events: {
           after: move,
@@ -556,11 +557,7 @@ export const useGameStore = defineStore('game', () => {
     mateBoardState.value = {
       fen: mateBoard.fen,
       orientation: opponentColor,
-      movable: {
-        free: false,
-        color: undefined,
-        dests: new Map(),
-      },
+      viewOnly: true,
       events: {
         move: (_orig: Key, _dest: Key, capturedPiece?: Piece) => {
           if (capturedPiece) applyMateBoardCapture(capturedPiece);
