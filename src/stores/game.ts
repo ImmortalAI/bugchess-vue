@@ -99,6 +99,8 @@ export const useGameStore = defineStore('game', () => {
     return chessIdxToSqr(promotionMoveCache.value.to)[0] as File;
   });
 
+  const preMDCache = shallowRef<{ from: Key; to: Key } | { role: Role; key: Key } | null>(null);
+
   // Register the Chessground instance created by a ChessBoard component.
   // Also syncs the board to the latest known config (handles reconnect before remount).
   const registerMainBoard = (cgApi: CgApi) => {
@@ -309,6 +311,42 @@ export const useGameStore = defineStore('game', () => {
     syncClock(myClockId.value, clocks[myClockId.value].remainingMs + incr.value);
   };
 
+  const playPreMoveDrop = () => {
+    if (!preMDCache.value || !api.value || !mainCgApi.value) return;
+
+    if ('from' in preMDCache.value) {
+      const from = parseSquare(preMDCache.value.from),
+        to = parseSquare(preMDCache.value.to);
+
+      if (from === undefined || to === undefined) {
+        throw new ChessError(
+          'Invalid preMoveDrop keys: ' + preMDCache.value.from + ' -> ' + preMDCache.value.to,
+        );
+      }
+
+      if (api.value.isLegal({ from, to })) {
+        mainCgApi.value.playPremove();
+      } else {
+        mainCgApi.value.cancelPremove();
+      }
+    } else {
+      const role = preMDCache.value.role,
+        key = parseSquare(preMDCache.value.key);
+
+      if (role === undefined || key === undefined) {
+        throw new ChessError(
+          'Invalid preMoveDrop keys: ' + preMDCache.value.role + ' -> ' + preMDCache.value.key,
+        );
+      }
+
+      if (api.value.isLegal({ role, to: key })) {
+        mainCgApi.value.playPredrop(() => true);
+      } else {
+        mainCgApi.value.cancelPredrop();
+      }
+    }
+  };
+
   const moveOpponent = (uci: string) => {
     if (!api.value) return;
 
@@ -362,6 +400,8 @@ export const useGameStore = defineStore('game', () => {
     }
 
     advanceClock('main', api.value.fullmoves, api.value.turn);
+
+    setTimeout(playPreMoveDrop, 1);
   };
 
   /** Route an incoming move to the correct board handler. */
@@ -570,6 +610,20 @@ export const useGameStore = defineStore('game', () => {
           afterNewPiece: drop,
         },
       },
+      premovable: {
+        enabled: true,
+        events: {
+          set: (orig, dest) => (preMDCache.value = { from: orig, to: dest }),
+          unset: () => (preMDCache.value = null),
+        },
+      },
+      predroppable: {
+        enabled: true,
+        events: {
+          set: (role, key) => (preMDCache.value = { role, key }),
+          unset: () => (preMDCache.value = null),
+        },
+      },
       events: {
         move: (_orig: Key, _dest: Key, capturedPiece?: Piece) => {
           if (capturedPiece) applyMainBoardCapture(capturedPiece);
@@ -623,6 +677,7 @@ export const useGameStore = defineStore('game', () => {
     isPromoting,
     promotionColor,
     promotionFile,
+    preMDCache,
     mainBoardState,
     mateBoardState,
     mainPockets,
