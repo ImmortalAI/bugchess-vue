@@ -72,6 +72,9 @@ export const useGameStore = defineStore('game', () => {
   /** Which board index (0 or 1) the local player is playing on. */
   const myBoardIdx = ref<0 | 1>(0);
 
+  /** Which team (0 = Team A, 1 = Team B) the local player belongs to. */
+  const myTeamIdx = ref<0 | 1>(0);
+
   /** Game result; null while the game is in progress. */
   const gameStatus = ref<BughouseData['status']>(null);
 
@@ -99,6 +102,8 @@ export const useGameStore = defineStore('game', () => {
     return chessIdxToSqr(promotionMoveCache.value.to)[0] as File;
   });
 
+  const preMDCache = shallowRef<{ from: Key; to: Key } | { role: Role; key: Key } | null>(null);
+
   // Register the Chessground instance created by a ChessBoard component.
   // Also syncs the board to the latest known config (handles reconnect before remount).
   const registerMainBoard = (cgApi: CgApi) => {
@@ -117,6 +122,21 @@ export const useGameStore = defineStore('game', () => {
 
   const unregisterMateBoard = () => {
     mateCgApi.value = null;
+  };
+
+  const restoreBoardState = () => {
+    if (!mainBoardState.value || !mainCgApi.value) return;
+
+    const patch: Config = {
+      turnColor: mainBoardState.value!.turnColor,
+      movable: {
+        dests: mainBoardState.value!.movable!.dests,
+      },
+      check: mainBoardState.value!.check,
+      lastMove: mainBoardState.value!.lastMove,
+    };
+
+    mainCgApi.value.set(patch);
   };
 
   const updateBoardState = (lastMove: [Key, Key] | [Key]) => {
@@ -236,6 +256,10 @@ export const useGameStore = defineStore('game', () => {
       throw new ChessError('Invalid move keys: ' + orig + ' -> ' + dest);
     }
 
+    if (!api.value.isLegal({ from, to })) {
+      throw new ChessError('Invalid move: ' + orig + ' -> ' + dest);
+    }
+
     if (api.value.board.get(from)?.role === 'pawn' && isFLLine(api.value.turn, dest)) {
       promotionMoveCache.value = { from, to };
       isPromoting.value = true;
@@ -265,6 +289,12 @@ export const useGameStore = defineStore('game', () => {
   const drop = (role: Role, to: Key) => {
     if (!api.value) return;
 
+    if (role === 'pawn' && isFLLine(mainBoardState.value!.orientation!, to)) {
+      mainCgApi.value?.setPieces(new Map([[to, undefined]]));
+      restoreBoardState();
+      return;
+    }
+
     const toSq = parseSquare(to);
     if (toSq === undefined) {
       throw new ChessError('Invalid drop target: ' + to);
@@ -282,6 +312,42 @@ export const useGameStore = defineStore('game', () => {
     updateBoardState([to]);
     advanceClock('main', api.value.fullmoves, api.value.turn);
     syncClock(myClockId.value, clocks[myClockId.value].remainingMs + incr.value);
+  };
+
+  const playPreMoveDrop = () => {
+    if (!preMDCache.value || !api.value || !mainCgApi.value) return;
+
+    if ('from' in preMDCache.value) {
+      const from = parseSquare(preMDCache.value.from),
+        to = parseSquare(preMDCache.value.to);
+
+      if (from === undefined || to === undefined) {
+        throw new ChessError(
+          'Invalid preMoveDrop keys: ' + preMDCache.value.from + ' -> ' + preMDCache.value.to,
+        );
+      }
+
+      if (api.value.isLegal({ from, to })) {
+        mainCgApi.value.playPremove();
+      } else {
+        mainCgApi.value.cancelPremove();
+      }
+    } else {
+      const role = preMDCache.value.role,
+        key = parseSquare(preMDCache.value.key);
+
+      if (role === undefined || key === undefined) {
+        throw new ChessError(
+          'Invalid preMoveDrop keys: ' + preMDCache.value.role + ' -> ' + preMDCache.value.key,
+        );
+      }
+
+      if (api.value.isLegal({ role, to: key })) {
+        mainCgApi.value.playPredrop(() => true);
+      } else {
+        mainCgApi.value.cancelPredrop();
+      }
+    }
   };
 
   const moveOpponent = (uci: string) => {
@@ -321,10 +387,8 @@ export const useGameStore = defineStore('game', () => {
 
       // Mark opponent's promoted piece so future captures of it correctly revert to pawn.
       if (parsed.promotion) {
-        const opponentColor: Color =
-          mainBoardState.value?.orientation === 'white' ? 'black' : 'white';
         mainCgApi.value?.setPieces(
-          new Map([[cgTo, { role: parsed.promotion, color: opponentColor, promoted: true }]]),
+          new Map([[cgTo, { role: parsed.promotion, color: moverColor, promoted: true }]]),
         );
       }
 
@@ -333,10 +397,16 @@ export const useGameStore = defineStore('game', () => {
       // Drop: chessops correctly decrements the opponent's pocket (initialized from cfg teams).
       api.value.play(parsed);
       if (mainPockets.value) mainPockets.value[moverColor][parsed.role as Exclude<Role, 'king'>]--;
+
+      const cgTo = chessIdxToSqr(parsed.to);
+      mainCgApi.value?.setPieces(new Map([[cgTo, { role: parsed.role, color: moverColor }]]));
+
       updateBoardState([chessIdxToSqr(parsed.to)]);
     }
 
     advanceClock('main', api.value.fullmoves, api.value.turn);
+
+    setTimeout(playPreMoveDrop, 1);
   };
 
   /** Route an incoming move to the correct board handler. */
@@ -467,6 +537,7 @@ export const useGameStore = defineStore('game', () => {
     }
 
     myBoardIdx.value = b;
+    myTeamIdx.value = b === p ? 0 : 1;
     const mateBoardIdxVal = (1 - b) as 0 | 1;
 
     const myBoard = data.boards[b];
@@ -545,6 +616,20 @@ export const useGameStore = defineStore('game', () => {
           afterNewPiece: drop,
         },
       },
+      premovable: {
+        enabled: true,
+        events: {
+          set: (orig, dest) => (preMDCache.value = { from: orig, to: dest }),
+          unset: () => (preMDCache.value = null),
+        },
+      },
+      predroppable: {
+        enabled: true,
+        events: {
+          set: (role, key) => (preMDCache.value = { role, key }),
+          unset: () => (preMDCache.value = null),
+        },
+      },
       events: {
         move: (_orig: Key, _dest: Key, capturedPiece?: Piece) => {
           if (capturedPiece) applyMainBoardCapture(capturedPiece);
@@ -587,6 +672,7 @@ export const useGameStore = defineStore('game', () => {
     matePockets.value = null;
     players.value = null;
     myBoardIdx.value = 0;
+    myTeamIdx.value = 0;
     gameStatus.value = null;
     clearClocks();
   };
@@ -598,12 +684,14 @@ export const useGameStore = defineStore('game', () => {
     isPromoting,
     promotionColor,
     promotionFile,
+    preMDCache,
     mainBoardState,
     mateBoardState,
     mainPockets,
     matePockets,
     players,
     myBoardIdx,
+    myTeamIdx,
     gameStatus,
     myClockId,
     opponentClockId,

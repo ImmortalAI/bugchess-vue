@@ -2,9 +2,12 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useTranslation } from '@/composables/useTranslation';
 import { useAuthStore } from '@/stores/auth';
+import { onMounted } from 'vue';
 
 const { t } = useTranslation();
 const auth = useAuthStore();
+
+onMounted(() => auth.refresh());
 </script>
 
 <template>
