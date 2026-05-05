@@ -78,7 +78,8 @@
       "aborted": "Aborted"
     },
     "resign": "Resign",
-    "resignConfirm": "Confirm resign"
+    "resignConfirm": "Confirm resign",
+    "backToLobby": "Back to lobby"
   },
   "chat": {
     "title": "Chat",
