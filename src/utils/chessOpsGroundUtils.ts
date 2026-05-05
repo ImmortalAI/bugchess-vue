@@ -45,8 +45,16 @@ export function chessSqrToIdx(squares: Key | Map<Key, Key[]>): Square | Map<Squa
   return result;
 }
 
-export const isFLLine = (color: 'white' | 'black', to: Key) =>
-  (color === 'white' && to[1] === '8') || (color === 'black' && to[1] === '1');
+/** Returns true if `to` is the promotion rank for `color` (rank 8 for white, rank 1 for black). */
+export function isFLLine(color: 'white' | 'black', to: Key): boolean;
+/** Returns true if `to` is on either the first or last rank (rank 1 or rank 8), regardless of color. */
+export function isFLLine(to: Key): boolean;
+export function isFLLine(colorOrTo: 'white' | 'black' | Key, to?: Key): boolean {
+  if (to !== undefined) {
+    return (colorOrTo === 'white' && to[1] === '8') || (colorOrTo === 'black' && to[1] === '1');
+  }
+  return colorOrTo[1] === '8' || colorOrTo[1] === '1';
+}
 
 export const colorToClockId = (color: Color, board: 'main' | 'mate'): ClockId =>
   board === 'main'
@@ -57,8 +65,7 @@ export const colorToClockId = (color: Color, board: 'main' | 'mate'): ClockId =>
       ? 'mateWhite'
       : 'mateBlack';
 
-export const isGameStarted = (setup: { fullmoves: number; turn: Color }) =>
-  setup.fullmoves > 1;
+export const isGameStarted = (setup: { fullmoves: number; turn: Color }) => setup.fullmoves > 1;
 
 export const getEnPassantCaptureSquare = (to: Square, color: Color): Square =>
   to + (color === 'white' ? -8 : 8);

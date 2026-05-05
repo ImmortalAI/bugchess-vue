@@ -304,7 +304,7 @@ export const useGameStore = defineStore('game', () => {
   const drop = (role: Role, to: Key) => {
     if (!api.value) return;
 
-    if (role === 'pawn' && isFLLine(mainBoardState.value!.orientation!, to)) {
+    if (role === 'pawn' && isFLLine(to)) {
       mainCgApi.value?.setPieces(new Map([[to, undefined]]));
       restoreBoardState();
       return;
