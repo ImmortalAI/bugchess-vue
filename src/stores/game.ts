@@ -72,6 +72,9 @@ export const useGameStore = defineStore('game', () => {
   /** Which board index (0 or 1) the local player is playing on. */
   const myBoardIdx = ref<0 | 1>(0);
 
+  /** Which team (0 = Team A, 1 = Team B) the local player belongs to. */
+  const myTeamIdx = ref<0 | 1>(0);
+
   /** Game result; null while the game is in progress. */
   const gameStatus = ref<BughouseData['status']>(null);
 
@@ -534,6 +537,7 @@ export const useGameStore = defineStore('game', () => {
     }
 
     myBoardIdx.value = b;
+    myTeamIdx.value = b === p ? 0 : 1;
     const mateBoardIdxVal = (1 - b) as 0 | 1;
 
     const myBoard = data.boards[b];
@@ -668,6 +672,7 @@ export const useGameStore = defineStore('game', () => {
     matePockets.value = null;
     players.value = null;
     myBoardIdx.value = 0;
+    myTeamIdx.value = 0;
     gameStatus.value = null;
     clearClocks();
   };
@@ -686,6 +691,7 @@ export const useGameStore = defineStore('game', () => {
     matePockets,
     players,
     myBoardIdx,
+    myTeamIdx,
     gameStatus,
     myClockId,
     opponentClockId,

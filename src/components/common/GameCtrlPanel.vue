@@ -10,7 +10,7 @@ import type { BughouseData } from '@/api/chess/chess.model';
 const props = defineProps<{
   lastMessage: ChatMessage | null;
   gameStatus: BughouseData['status'];
-  myBoardIdx: 0 | 1;
+  myTeamIdx: 0 | 1;
   quickMessages?: string[];
   disabled?: boolean;
   class?: string;
@@ -28,8 +28,8 @@ const resultText = computed(() => {
   if (props.gameStatus === 'Draw') return t('match.gameResult.draw');
   if (props.gameStatus === 'Abort') return t('match.gameResult.aborted');
   const iWon =
-    (props.gameStatus === 'WinA' && props.myBoardIdx === 0) ||
-    (props.gameStatus === 'WinB' && props.myBoardIdx === 1);
+    (props.gameStatus === 'WinA' && props.myTeamIdx === 0) ||
+    (props.gameStatus === 'WinB' && props.myTeamIdx === 1);
   return iWon ? t('match.gameResult.win') : t('match.gameResult.loss');
 });
 </script>

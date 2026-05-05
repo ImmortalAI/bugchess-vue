@@ -118,7 +118,7 @@ const quickMessages = [
 
     <!-- Mobile game controls: chat + resign + result -->
     <GameCtrlPanel class="px-2" :last-message="game.lastChatMessage" :game-status="game.gameStatus"
-      :my-board-idx="game.myBoardIdx" :quick-messages="quickMessages" @send="matchNewMsg" @resign="game.resign()" />
+      :my-team-idx="game.myTeamIdx" :quick-messages="quickMessages" @send="matchNewMsg" @resign="game.resign()" />
   </div>
 
   <!-- Desktop layout -->
@@ -153,7 +153,7 @@ const quickMessages = [
           :clock-active="game.clocks[game.enemyClockId].active" clock-position="inline-start" class="flex-1 min-w-0" />
       </div>
       <GameCtrlPanel class="w-96" :last-message="game.lastChatMessage" :game-status="game.gameStatus"
-        :my-board-idx="game.myBoardIdx" :quick-messages="quickMessages" @send="matchNewMsg" @resign="game.resign()" />
+        :my-team-idx="game.myTeamIdx" :quick-messages="quickMessages" @send="matchNewMsg" @resign="game.resign()" />
     </div>
   </div>
 </template>
