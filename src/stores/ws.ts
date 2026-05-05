@@ -136,7 +136,7 @@ export const useWebSocketStore = defineStore('websocket', () => {
         game.receiveMove(data.data);
         break;
       case WsMsgType.GAME_CHAT_MSG_RECEIVE:
-        game.addChatMessage('Opponent', data.data, false);
+        game.addChatMessage(data.data.username, data.data.text, false);
         break;
       case WsMsgType.GAME_END:
         game.onGameEnd(data.data);
