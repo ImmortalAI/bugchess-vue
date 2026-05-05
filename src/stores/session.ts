@@ -44,7 +44,7 @@ export const useSessionStore = defineStore('session', () => {
 
   const returnToLobby = () => {
     useWebSocketStore().sendMessage({ type: WsMsgType.REQ_SYNC, data: {} });
-    setIdle();
+    setLobby();
   };
 
   return {
