@@ -119,6 +119,21 @@ export const useGameStore = defineStore('game', () => {
     mateCgApi.value = null;
   };
 
+  const restoreBoardState = () => {
+    if (!mainBoardState.value || !mainCgApi.value) return;
+
+    const patch: Config = {
+      turnColor: mainBoardState.value!.turnColor,
+      movable: {
+        dests: mainBoardState.value!.movable!.dests,
+      },
+      check: mainBoardState.value!.check,
+      lastMove: mainBoardState.value!.lastMove,
+    };
+
+    mainCgApi.value.set(patch);
+  };
+
   const updateBoardState = (lastMove: [Key, Key] | [Key]) => {
     if (!api.value) return;
 
@@ -236,6 +251,10 @@ export const useGameStore = defineStore('game', () => {
       throw new ChessError('Invalid move keys: ' + orig + ' -> ' + dest);
     }
 
+    if (!api.value.isLegal({ from, to })) {
+      throw new ChessError('Invalid move: ' + orig + ' -> ' + dest);
+    }
+
     if (api.value.board.get(from)?.role === 'pawn' && isFLLine(api.value.turn, dest)) {
       promotionMoveCache.value = { from, to };
       isPromoting.value = true;
@@ -264,6 +283,12 @@ export const useGameStore = defineStore('game', () => {
 
   const drop = (role: Role, to: Key) => {
     if (!api.value) return;
+
+    if (role === 'pawn' && isFLLine(mainBoardState.value!.orientation!, to)) {
+      mainCgApi.value?.setPieces(new Map([[to, undefined]]));
+      restoreBoardState();
+      return;
+    }
 
     const toSq = parseSquare(to);
     if (toSq === undefined) {
