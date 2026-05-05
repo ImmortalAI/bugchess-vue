@@ -33,7 +33,7 @@ const fileToIndex: Record<File, number> = {
 
 const leftPos = computed(() => {
   const index = fileToIndex[props.file];
-  return index * 12.5;
+  return (props.color === 'white' ? index : 7 - index) * 12.5;
 });
 </script>
 
