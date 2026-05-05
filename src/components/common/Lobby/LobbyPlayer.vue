@@ -33,7 +33,7 @@ const avatarSrc = computed(() => {
 const onClick = () => {
   if (!props.username) {
     if (props.canInvite) emit('invite');
-  } else if (props.canKick) {
+  } else if (props.canKick && !props.isMe) {
     confirmingKick.value = true;
   }
 };
@@ -49,23 +49,19 @@ const cancelKick = () => {
 </script>
 
 <template>
-  <div
-    class="relative w-full h-36 border-2 rounded-md overflow-hidden select-none"
-    :class="(!username && canInvite) || (username && canKick) ? 'cursor-pointer' : 'cursor-default'"
-    @click="onClick"
-  >
+  <div class="relative w-full h-36 border-2 rounded-md overflow-hidden select-none"
+    :class="(!username && canInvite) || (username && canKick) ? 'cursor-pointer' : 'cursor-default'" @click="onClick">
     <!-- Player info -->
-    <div
-      class="flex flex-col items-center justify-center gap-2 w-full h-full transition-opacity"
-      :class="confirmingKick ? 'opacity-20 pointer-events-none' : 'opacity-100'"
-    >
+    <div class="flex flex-col items-center justify-center gap-2 w-full h-full transition-opacity"
+      :class="confirmingKick ? 'opacity-20 pointer-events-none' : 'opacity-100'">
       <Avatar class="size-12">
         <AvatarImage v-if="props.username" :src="avatarSrc ?? ''" :alt="props.username" />
         <AvatarImage v-else :src="personImg" alt="" class="dark:invert" />
         <AvatarFallback>{{ props.username?.[0]?.toUpperCase() ?? '?' }}</AvatarFallback>
       </Avatar>
       <span class="text-sm" :class="props.username ? 'font-medium' : 'text-muted-foreground'">
-        {{ props.username ? (props.isMe ? t('lobby.you') : props.username) : (props.canInvite ? t('lobby.invitePlayer') : t('lobby.emptySlot')) }}
+        {{ props.username ? (props.isMe ? t('lobby.you') : props.username) : (props.canInvite ? t('lobby.invitePlayer')
+          : t('lobby.emptySlot')) }}
         <span v-if="props.username && props.isLeader" class="text-xs text-muted-foreground font-normal">
           ({{ t('lobby.leader') }})
         </span>
@@ -74,11 +70,9 @@ const cancelKick = () => {
 
     <!-- Kick confirmation overlay -->
     <Transition name="confirm">
-      <div
-        v-if="confirmingKick"
+      <div v-if="confirmingKick"
         class="absolute inset-0 flex flex-col items-center justify-center gap-2 p-2 bg-background/95 backdrop-blur-sm"
-        @click.stop
-      >
+        @click.stop>
         <span class="text-xs font-semibold text-destructive text-center leading-tight">
           {{ t('lobby.kickConfirm') }}
         </span>
@@ -100,6 +94,7 @@ const cancelKick = () => {
     opacity 0.15s ease,
     transform 0.15s ease;
 }
+
 .confirm-enter-from,
 .confirm-leave-to {
   opacity: 0;

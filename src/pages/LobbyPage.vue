@@ -14,7 +14,7 @@ import { useAuthStore } from '@/stores/auth';
 import { useWebSocketStore } from '@/stores/ws';
 import { WsMsgType } from '@/api/websocket/websocket.model';
 import { usersActive } from '@/api/users/users.service';
-import { computed, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { useDebounceFn } from '@vueuse/core';
 
@@ -29,6 +29,18 @@ const ws = useWebSocketStore();
 const router = useRouter();
 
 const isLeader = computed(() => lobby.leader === auth.user?.username);
+
+const canUpdateLobby = computed(() => isLeader.value && !lobby.inQueue);
+const canPlayRating = computed(() => {
+  if (!lobby.teamA || !lobby.teamB) return false;
+  const count = (lobby.teamA[0] === null ? 0 : 1)
+    + (lobby.teamA[1] === null ? 0 : 1)
+    + (lobby.teamB[0] === null ? 0 : 1)
+    + (lobby.teamB[1] === null ? 0 : 1);
+  return count !== 3;
+})
+
+watch(canPlayRating, (value) => value && (lobby.rated = false));
 
 const sendConfigUpdate = useDebounceFn(() => {
   ws.sendMessage({
@@ -75,7 +87,7 @@ const sendInvite = (username: string) => {
 <template>
   <div class="flex justify-center items-center w-full h-full p-4" :class="{ invisible: !session.initialized }">
     <div class="flex flex-col gap-8 p-8 border border-primary rounded-lg w-full sm:w-auto">
-      <ChessClockSlider v-model:minutes="lobby.time" v-model:seconds="lobby.increment" :disabled="!isLeader"
+      <ChessClockSlider v-model:minutes="lobby.time" v-model:seconds="lobby.increment" :disabled="!canUpdateLobby"
         @update:minutes="sendConfigUpdate" @update:seconds="sendConfigUpdate" />
       <div class="flex gap-4 items-stretch">
         <div class="flex flex-col gap-2 flex-1 border border-border rounded-md p-3">
@@ -83,10 +95,11 @@ const sendInvite = (username: string) => {
             t('lobby.team1')
             }}</span>
           <div class="flex flex-col gap-2 justify-end flex-1">
-            <LobbyPlayer :username="lobby.teamA?.[0]?.username" :canInvite="isLeader"
+            <LobbyPlayer :username="lobby.teamA?.[0]?.username" :canKick="canUpdateLobby" :canInvite="canUpdateLobby"
               :isLeader="lobby.teamA?.[0]?.username === lobby.leader"
-              :isMe="lobby.teamA?.[0]?.username === auth.user?.username" @invite="openInviteDialog(0)" />
-            <LobbyPlayer :username="lobby.teamA?.[1]?.username" :canKick="isLeader" :canInvite="isLeader"
+              :isMe="lobby.teamA?.[0]?.username === auth.user?.username" @kick="kickPlayer(lobby.teamA?.[0]?.username)"
+              @invite="openInviteDialog(0)" />
+            <LobbyPlayer :username="lobby.teamA?.[1]?.username" :canKick="canUpdateLobby" :canInvite="canUpdateLobby"
               :isLeader="lobby.teamA?.[1]?.username === lobby.leader"
               :isMe="lobby.teamA?.[1]?.username === auth.user?.username" @kick="kickPlayer(lobby.teamA?.[1]?.username)"
               @invite="openInviteDialog(1)" />
@@ -97,11 +110,11 @@ const sendInvite = (username: string) => {
             t('lobby.team2')
             }}</span>
           <div class="flex flex-col gap-2 justify-end flex-1">
-            <LobbyPlayer :username="lobby.teamB?.[0]?.username" :canKick="isLeader" :canInvite="isLeader"
+            <LobbyPlayer :username="lobby.teamB?.[0]?.username" :canKick="canUpdateLobby" :canInvite="canUpdateLobby"
               :isLeader="lobby.teamB?.[0]?.username === lobby.leader"
               :isMe="lobby.teamB?.[0]?.username === auth.user?.username" @kick="kickPlayer(lobby.teamB?.[0]?.username)"
               @invite="openInviteDialog(2)" />
-            <LobbyPlayer :username="lobby.teamB?.[1]?.username" :canKick="isLeader" :canInvite="isLeader"
+            <LobbyPlayer :username="lobby.teamB?.[1]?.username" :canKick="canUpdateLobby" :canInvite="canUpdateLobby"
               :isLeader="lobby.teamB?.[1]?.username === lobby.leader"
               :isMe="lobby.teamB?.[1]?.username === auth.user?.username" @kick="kickPlayer(lobby.teamB?.[1]?.username)"
               @invite="openInviteDialog(3)" />
@@ -110,7 +123,7 @@ const sendInvite = (username: string) => {
       </div>
       <div class="flex flex-col sm:flex-row sm:justify-between gap-3">
         <div class="flex items-center space-x-2">
-          <Switch id="rating-switch" v-model="lobby.rated" :disabled="!isLeader"
+          <Switch id="rating-switch" v-model="lobby.rated" :disabled="!canUpdateLobby || !canPlayRating"
             @update:modelValue="sendConfigUpdate" />
           <Label for="rating-switch">{{ t('lobby.rating') }}</Label>
         </div>
