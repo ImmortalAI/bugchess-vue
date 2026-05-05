@@ -178,8 +178,7 @@ export const useGameStore = defineStore('game', () => {
 
     mainCgApi.value.set(patch);
 
-    if (check) playSound('Check');
-    else if (pendingCaptureSound) playSound('Capture');
+    if (pendingCaptureSound) playSound('Capture');
     else playSound('Move');
     pendingCaptureSound = false;
   };
@@ -199,8 +198,7 @@ export const useGameStore = defineStore('game', () => {
 
     mateCgApi.value.set(patch);
 
-    if (check) playSound('Check');
-    else if (pendingCaptureSound) playSound('Capture');
+    if (pendingCaptureSound) playSound('Capture');
     else playSound('Move');
     pendingCaptureSound = false;
   };
