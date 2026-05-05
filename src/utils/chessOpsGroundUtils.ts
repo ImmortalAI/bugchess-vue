@@ -65,8 +65,6 @@ export const colorToClockId = (color: Color, board: 'main' | 'mate'): ClockId =>
       ? 'mateWhite'
       : 'mateBlack';
 
-export const isGameStarted = (setup: { fullmoves: number; turn: Color }) => setup.fullmoves > 1;
-
 export const getEnPassantCaptureSquare = (to: Square, color: Color): Square =>
   to + (color === 'white' ? -8 : 8);
 

@@ -6,7 +6,6 @@ import {
   copyPocket,
   getEnPassantCaptureSquare,
   isFLLine,
-  isGameStarted,
 } from '@/utils/chessOpsGroundUtils';
 import type { Config } from '@lichess-org/chessground/config';
 import type { File, Key, Piece } from '@lichess-org/chessground/types';
@@ -33,9 +32,10 @@ export const useGameStore = defineStore('game', () => {
   const {
     clocks,
     start: startClock,
+    stopAll: stopAllClocks,
     reset: resetClock,
     sync: syncClock,
-    advance: advanceClock,
+    toggle: toggleClock,
     clear: clearClocks,
   } = useChessClocks();
 
@@ -275,7 +275,7 @@ export const useGameStore = defineStore('game', () => {
     isPromoting.value = false;
 
     updateBoardState([chessIdxToSqr(from), chessIdxToSqr(to)]);
-    advanceClock('main', api.value.fullmoves, api.value.turn);
+    toggleClock('main');
     syncClock(myClockId.value, clocks[myClockId.value].remainingMs + incr.value);
   };
 
@@ -315,7 +315,7 @@ export const useGameStore = defineStore('game', () => {
     // Normal captures are handled by the events.move handler (applyMainBoardCapture).
     playWithPocketRestore(api, { from, to });
     updateBoardState([orig, dest]);
-    advanceClock('main', api.value.fullmoves, api.value.turn);
+    toggleClock('main');
     syncClock(myClockId.value, clocks[myClockId.value].remainingMs + incr.value);
   };
 
@@ -343,7 +343,7 @@ export const useGameStore = defineStore('game', () => {
     if (mainPockets.value) mainPockets.value[moverColor][role as Exclude<Role, 'king'>]--;
 
     updateBoardState([to]);
-    advanceClock('main', api.value.fullmoves, api.value.turn);
+    toggleClock('main');
     syncClock(myClockId.value, clocks[myClockId.value].remainingMs + incr.value);
   };
 
@@ -438,7 +438,7 @@ export const useGameStore = defineStore('game', () => {
       updateBoardState([chessIdxToSqr(parsed.to)]);
     }
 
-    advanceClock('main', api.value.fullmoves, api.value.turn);
+    toggleClock('main');
 
     setTimeout(playPreMoveDrop, 1);
   };
@@ -514,7 +514,7 @@ export const useGameStore = defineStore('game', () => {
       syncClock(colorToClockId('white', 'mate'), Math.max(0, data.whiteClockTime));
       syncClock(colorToClockId('black', 'mate'), Math.max(0, data.blackClockTime));
 
-      advanceClock('mate', mateApi.value.fullmoves, mateApi.value.turn);
+      toggleClock('mate');
     }
   };
 
@@ -533,7 +533,7 @@ export const useGameStore = defineStore('game', () => {
 
   const onGameEnd = (data: WsGameEndData) => {
     gameStatus.value = data.status;
-    clearClocks();
+    stopAllClocks();
     const disabledMovable = { color: undefined, dests: new Map<Key, Key[]>() };
     if (mainBoardState.value) {
       mainBoardState.value = { ...mainBoardState.value, movable: disabledMovable };
@@ -632,30 +632,37 @@ export const useGameStore = defineStore('game', () => {
       opponent: copyPocket(mateApi.value.pockets[partnerEnemy.color]),
     };
 
-    const mainTurnColor = isGameStarted(fenSetup) ? fenSetup.turn : null;
-    const mateTurnColor = isGameStarted(mateFenSetup) ? mateFenSetup.turn : null;
-
-    if (myBoard.autoAbortAt && !mainTurnColor) {
+    if (myBoard.autoAbortAt) {
       const mainAutoAbortMs = Math.max(0, myBoard.autoAbortAt - Date.now());
-      resetClock('mainWhite', mainAutoAbortMs);
-      resetClock('mainBlack', mainAutoAbortMs);
-      startClock('mainWhite');
+
+      if (fenSetup.halfmoves === 0) {
+        resetClock('mainWhite', mainAutoAbortMs);
+        resetClock('mainBlack', mainAutoAbortMs);
+      } else {
+        resetClock('mainWhite', Math.max(0, myBoard.players[0].clockTime));
+        resetClock('mainBlack', mainAutoAbortMs);
+      }
     } else {
       resetClock('mainWhite', Math.max(0, myBoard.players[0].clockTime));
       resetClock('mainBlack', Math.max(0, myBoard.players[1].clockTime));
-      if (mainTurnColor) startClock(colorToClockId(mainTurnColor, 'main'));
     }
+    startClock(colorToClockId(fenSetup.turn, 'main'));
 
-    if (mateBoard.autoAbortAt && !mateTurnColor) {
+    if (mateBoard.autoAbortAt) {
       const mateAutoAbortMs = Math.max(0, mateBoard.autoAbortAt - Date.now());
-      resetClock('mateWhite', mateAutoAbortMs);
-      resetClock('mateBlack', mateAutoAbortMs);
-      startClock('mateWhite');
+
+      if (mateFenSetup.halfmoves === 0) {
+        resetClock('mateWhite', mateAutoAbortMs);
+        resetClock('mateBlack', mateAutoAbortMs);
+      } else {
+        resetClock('mateWhite', Math.max(0, mateBoard.players[0].clockTime));
+        resetClock('mateBlack', mateAutoAbortMs);
+      }
     } else {
       resetClock('mateWhite', Math.max(0, mateBoard.players[0].clockTime));
       resetClock('mateBlack', Math.max(0, mateBoard.players[1].clockTime));
-      if (mateTurnColor) startClock(colorToClockId(mateTurnColor, 'mate'));
     }
+    startClock(colorToClockId(mateFenSetup.turn, 'mate'));
 
     const turnColor = api.value.turn;
     const isOurTurn = turnColor === myColor;
