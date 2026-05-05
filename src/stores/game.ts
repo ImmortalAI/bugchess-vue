@@ -6,7 +6,6 @@ import {
   copyPocket,
   getEnPassantCaptureSquare,
   isFLLine,
-  isGameStarted,
 } from '@/utils/chessOpsGroundUtils';
 import type { Config } from '@lichess-org/chessground/config';
 import type { File, Key, Piece } from '@lichess-org/chessground/types';
@@ -26,15 +25,17 @@ import { useWebSocketStore } from './ws';
 import { useAuthStore } from './auth';
 import type { BughouseData, CgApi, PlayerInfo, PocketData } from '@/api/chess/chess.model';
 import type { ChatMessage } from '@/components/common/ChatComponent/types';
+import { playSound } from '@/utils/sounds';
 
 export const useGameStore = defineStore('game', () => {
   const ws = useWebSocketStore();
   const {
     clocks,
     start: startClock,
+    stopAll: stopAllClocks,
     reset: resetClock,
     sync: syncClock,
-    advance: advanceClock,
+    toggle: toggleClock,
     clear: clearClocks,
   } = useChessClocks();
 
@@ -104,6 +105,10 @@ export const useGameStore = defineStore('game', () => {
 
   const preMDCache = shallowRef<{ from: Key; to: Key } | { role: Role; key: Key } | null>(null);
 
+  // Set to true by capture handlers before updateBoardState/updateMateBoardState runs,
+  // so those functions know to play Capture instead of Move.
+  let pendingCaptureSound = false;
+
   // Register the Chessground instance created by a ChessBoard component.
   // Also syncs the board to the latest known config (handles reconnect before remount).
   const registerMainBoard = (cgApi: CgApi) => {
@@ -168,6 +173,11 @@ export const useGameStore = defineStore('game', () => {
       },
     };
     mainCgApi.value?.set(patch);
+
+    if (check) playSound('Check');
+    else if (pendingCaptureSound) playSound('Capture');
+    else playSound('Move');
+    pendingCaptureSound = false;
   };
 
   const updateMateBoardState = (lastMove: Key[]) => {
@@ -181,6 +191,11 @@ export const useGameStore = defineStore('game', () => {
       ...patch,
     };
     mateCgApi.value?.set(patch);
+
+    if (check) playSound('Check');
+    else if (pendingCaptureSound) playSound('Capture');
+    else playSound('Move');
+    pendingCaptureSound = false;
   };
 
   // In Bughouse, captured pieces go to the partner's board, not the capturer's pocket.
@@ -203,6 +218,7 @@ export const useGameStore = defineStore('game', () => {
     else matePockets.value.opponent[pocketRole]++;
 
     mateApi.value.pockets![capturedPiece.color][pocketRole]++;
+    pendingCaptureSound = true;
   };
 
   // Route a mate-board capture to the correct main-board pocket.
@@ -215,6 +231,7 @@ export const useGameStore = defineStore('game', () => {
     mainPockets.value[capturedPiece.color][pocketRole]++;
 
     api.value.pockets![capturedPiece.color][pocketRole]++;
+    pendingCaptureSound = true;
   };
 
   const promote = (promotion: Exclude<Role, 'king' | 'pawn'>) => {
@@ -258,7 +275,7 @@ export const useGameStore = defineStore('game', () => {
     isPromoting.value = false;
 
     updateBoardState([chessIdxToSqr(from), chessIdxToSqr(to)]);
-    advanceClock('main', api.value.fullmoves, api.value.turn);
+    toggleClock('main');
     syncClock(myClockId.value, clocks[myClockId.value].remainingMs + incr.value);
   };
 
@@ -293,18 +310,19 @@ export const useGameStore = defineStore('game', () => {
       const mateColor = mainBoardState.value?.orientation === 'white' ? 'black' : 'white';
       mateApi.value!.pockets![mateColor]['pawn']++;
       mainCgApi.value?.setPieces(new Map([[chessIdxToSqr(epCaptureSquare), undefined]]));
+      pendingCaptureSound = true;
     }
     // Normal captures are handled by the events.move handler (applyMainBoardCapture).
     playWithPocketRestore(api, { from, to });
     updateBoardState([orig, dest]);
-    advanceClock('main', api.value.fullmoves, api.value.turn);
+    toggleClock('main');
     syncClock(myClockId.value, clocks[myClockId.value].remainingMs + incr.value);
   };
 
   const drop = (role: Role, to: Key) => {
     if (!api.value) return;
 
-    if (role === 'pawn' && isFLLine(mainBoardState.value!.orientation!, to)) {
+    if (role === 'pawn' && isFLLine(to)) {
       mainCgApi.value?.setPieces(new Map([[to, undefined]]));
       restoreBoardState();
       return;
@@ -325,7 +343,7 @@ export const useGameStore = defineStore('game', () => {
     if (mainPockets.value) mainPockets.value[moverColor][role as Exclude<Role, 'king'>]--;
 
     updateBoardState([to]);
-    advanceClock('main', api.value.fullmoves, api.value.turn);
+    toggleClock('main');
     syncClock(myClockId.value, clocks[myClockId.value].remainingMs + incr.value);
   };
 
@@ -398,6 +416,7 @@ export const useGameStore = defineStore('game', () => {
         matePockets.value.opponent['pawn']++;
         mateApi.value!.pockets![myColor!]['pawn']++;
         mainCgApi.value?.setPieces(new Map([[chessIdxToSqr(epCaptureSquare), undefined]]));
+        pendingCaptureSound = true;
       }
 
       // Mark opponent's promoted piece so future captures of it correctly revert to pawn.
@@ -419,7 +438,7 @@ export const useGameStore = defineStore('game', () => {
       updateBoardState([chessIdxToSqr(parsed.to)]);
     }
 
-    advanceClock('main', api.value.fullmoves, api.value.turn);
+    toggleClock('main');
 
     setTimeout(playPreMoveDrop, 1);
   };
@@ -495,7 +514,7 @@ export const useGameStore = defineStore('game', () => {
       syncClock(colorToClockId('white', 'mate'), Math.max(0, data.whiteClockTime));
       syncClock(colorToClockId('black', 'mate'), Math.max(0, data.blackClockTime));
 
-      advanceClock('mate', mateApi.value.fullmoves, mateApi.value.turn);
+      toggleClock('mate');
     }
   };
 
@@ -514,12 +533,23 @@ export const useGameStore = defineStore('game', () => {
 
   const onGameEnd = (data: WsGameEndData) => {
     gameStatus.value = data.status;
-    clearClocks();
+    stopAllClocks();
     const disabledMovable = { color: undefined, dests: new Map<Key, Key[]>() };
     if (mainBoardState.value) {
       mainBoardState.value = { ...mainBoardState.value, movable: disabledMovable };
     }
     mainCgApi.value?.set({ movable: disabledMovable });
+
+    if (data.status === 'Draw' || data.status === 'Abort') {
+      playSound('Draw');
+    } else if (
+      (data.status === 'WinA' && myTeamIdx.value === 0) ||
+      (data.status === 'WinB' && myTeamIdx.value === 1)
+    ) {
+      playSound('Victory');
+    } else {
+      playSound('Defeat');
+    }
   };
 
   /**
@@ -602,30 +632,37 @@ export const useGameStore = defineStore('game', () => {
       opponent: copyPocket(mateApi.value.pockets[partnerEnemy.color]),
     };
 
-    const mainTurnColor = isGameStarted(fenSetup) ? fenSetup.turn : null;
-    const mateTurnColor = isGameStarted(mateFenSetup) ? mateFenSetup.turn : null;
-
-    if (myBoard.autoAbortAt && !mainTurnColor) {
+    if (myBoard.autoAbortAt) {
       const mainAutoAbortMs = Math.max(0, myBoard.autoAbortAt - Date.now());
-      resetClock('mainWhite', mainAutoAbortMs);
-      resetClock('mainBlack', mainAutoAbortMs);
-      startClock('mainWhite');
+
+      if (fenSetup.halfmoves === 0) {
+        resetClock('mainWhite', mainAutoAbortMs);
+        resetClock('mainBlack', mainAutoAbortMs);
+      } else {
+        resetClock('mainWhite', Math.max(0, myBoard.players[0].clockTime));
+        resetClock('mainBlack', mainAutoAbortMs);
+      }
     } else {
       resetClock('mainWhite', Math.max(0, myBoard.players[0].clockTime));
       resetClock('mainBlack', Math.max(0, myBoard.players[1].clockTime));
-      if (mainTurnColor) startClock(colorToClockId(mainTurnColor, 'main'));
     }
+    startClock(colorToClockId(fenSetup.turn, 'main'));
 
-    if (mateBoard.autoAbortAt && !mateTurnColor) {
+    if (mateBoard.autoAbortAt) {
       const mateAutoAbortMs = Math.max(0, mateBoard.autoAbortAt - Date.now());
-      resetClock('mateWhite', mateAutoAbortMs);
-      resetClock('mateBlack', mateAutoAbortMs);
-      startClock('mateWhite');
+
+      if (mateFenSetup.halfmoves === 0) {
+        resetClock('mateWhite', mateAutoAbortMs);
+        resetClock('mateBlack', mateAutoAbortMs);
+      } else {
+        resetClock('mateWhite', Math.max(0, mateBoard.players[0].clockTime));
+        resetClock('mateBlack', mateAutoAbortMs);
+      }
     } else {
       resetClock('mateWhite', Math.max(0, mateBoard.players[0].clockTime));
       resetClock('mateBlack', Math.max(0, mateBoard.players[1].clockTime));
-      if (mateTurnColor) startClock(colorToClockId(mateTurnColor, 'mate'));
     }
+    startClock(colorToClockId(mateFenSetup.turn, 'mate'));
 
     const turnColor = api.value.turn;
     const isOurTurn = turnColor === myColor;

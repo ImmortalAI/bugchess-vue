@@ -11,6 +11,8 @@ interface ClockState {
   remainingMs: number;
   /** Whether this clock is currently counting down. */
   active: boolean;
+  /** Optional secondary time (ms) that replaces `remainingMs` on the next `toggle` — used to stage the real game clock behind a temporary countdown (e.g. auto-abort). Cleared after the swap. */
+  tempMs?: number;
 }
 
 type Clocks = Record<ClockId, ClockState>;
@@ -77,13 +79,25 @@ export function useChessClocks() {
   }
 
   /**
+   * Stop all four clocks without zeroing their remaining time.
+   * Pauses the RAF loop immediately.
+   */
+  function stopAll() {
+    pauseLoop();
+    for (const id of CLOCK_IDS) {
+      clocks[id].active = false;
+    }
+  }
+
+  /**
    * Stop and set a new time for the given clock without starting it.
    * @param id - Clock to reset.
    * @param ms - New time in milliseconds.
    */
-  function reset(id: ClockId, ms: number) {
+  function reset(id: ClockId, ms: number, tempMs?: number) {
     clocks[id].active = false;
     clocks[id].remainingMs = ms;
+    if (tempMs) clocks[id].tempMs = tempMs;
   }
 
   /**
@@ -130,47 +144,40 @@ export function useChessClocks() {
     }
   });
 
+  /**
+   * Overwrite the remaining time for a clock without changing its running state.
+   * Used to apply authoritative server values after a move.
+   * @param id - Clock to update.
+   * @param ms - New remaining time in milliseconds.
+   */
   function sync(id: ClockId, ms: number) {
     clocks[id].remainingMs = ms;
   }
 
+  /**
+   * Switch the running clock on a board from the current mover to the next mover.
+   * If the stopping clock has a `tempMs` staged, its `remainingMs` is replaced by that value
+   * before it is handed off (swaps a temporary countdown back to the real game clock).
+   * No-op if neither clock on the board is currently active.
+   * @param board - Which board's clock pair to toggle.
+   */
   function toggle(board: 'main' | 'mate') {
     const w: ClockId = board === 'main' ? 'mainWhite' : 'mateWhite';
     const b: ClockId = board === 'main' ? 'mainBlack' : 'mateBlack';
     if (clocks[w].active) {
       stop(w);
+      if (clocks[w].tempMs) {
+        clocks[w].remainingMs = clocks[w].tempMs;
+        clocks[w].tempMs = undefined;
+      }
       start(b);
     } else if (clocks[b].active) {
       stop(b);
+      if (clocks[b].tempMs) {
+        clocks[b].remainingMs = clocks[b].tempMs;
+        clocks[b].tempMs = undefined;
+      }
       start(w);
-    }
-  }
-
-  /**
-   * Advance the clock for a board after a move.
-   * Clocks only begin ticking once Black has made their first reply (fullmoves > 1).
-   * Before that threshold neither clock is active, so toggle() would be a no-op —
-   * instead we start the current-turn clock explicitly once the threshold is crossed.
-   * @param board - Which board's pair of clocks to advance.
-   * @param fullmoves - Full-move counter from the position after the move was played.
-   * @param turn - Side to move after the move was played.
-   */
-  function advance(board: 'main' | 'mate', fullmoves: number, turn: 'white' | 'black') {
-    const w: ClockId = board === 'main' ? 'mainWhite' : 'mateWhite';
-    const b: ClockId = board === 'main' ? 'mainBlack' : 'mateBlack';
-    if (!clocks[w].active && !clocks[b].active) {
-      if (fullmoves <= 1) return;
-      const id: ClockId =
-        board === 'main'
-          ? turn === 'white'
-            ? 'mainWhite'
-            : 'mainBlack'
-          : turn === 'white'
-            ? 'mateWhite'
-            : 'mateBlack';
-      start(id);
-    } else {
-      toggle(board);
     }
   }
 
@@ -183,5 +190,5 @@ export function useChessClocks() {
     }
   }
 
-  return { clocks, start, stop, reset, resetAll, sync, toggle, advance, clear };
+  return { clocks, start, stop, stopAll, reset, resetAll, sync, toggle, clear };
 }

@@ -9,8 +9,9 @@ import { useLobbyStore } from '@/stores/lobby';
 import { useSessionStore } from '@/stores/session';
 import { useWebSocketStore } from '@/stores/ws';
 import { quickGameOptions, type QuickGameOption } from '@/utils/quickGameOptions';
-import { computed } from 'vue';
+import { computed, watch } from 'vue';
 import { useRouter } from 'vue-router';
+import { playSound } from '@/utils/sounds';
 
 const { t } = useTranslation();
 
@@ -22,6 +23,11 @@ const router = useRouter();
 
 const inviteVisible = computed(() => session.pendingInvite !== null);
 const inviterUsername = computed(() => session.pendingInvite ?? '');
+
+watch(
+  () => session.pendingInvite,
+  (val) => { if (val !== null) playSound('NewChallenge'); },
+);
 
 const onInviteAccept = () => {
   ws.sendMessage({ type: WsMsgType.INVITE_ACCEPT, data: session.pendingInvite! });

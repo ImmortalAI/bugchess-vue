@@ -2,12 +2,21 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useTranslation } from '@/composables/useTranslation';
 import { useAuthStore } from '@/stores/auth';
-import { onMounted } from 'vue';
+import { computed, onMounted } from 'vue';
+import { useRouter } from 'vue-router';
 
 const { t } = useTranslation();
 const auth = useAuthStore();
+const router = useRouter();
 
-onMounted(() => auth.refresh());
+const rating = computed(() => Math.round(auth.user!.rating));
+const sigma = computed(() => Math.round(auth.user!.sigma));
+
+onMounted(async () => {
+  if (!auth.isAuthenticated) router.push('/signin');
+
+  await auth.refresh()
+});
 </script>
 
 <template>
@@ -22,9 +31,9 @@ onMounted(() => auth.refresh());
         <CardContent>
           <span
             class="text-7xl font-black tracking-tight bg-linear-to-br from-primary to-primary/50 bg-clip-text text-transparent">
-            {{ auth.user?.rating ?? '—' }}
+            {{ rating }}
           </span>
-          <span class="ml-12">sigma {{ auth.user?.sigma ?? '—' }}</span>
+          <span class="ml-12">sigma {{ sigma }}</span>
         </CardContent>
       </Card>
     </div>
