@@ -26,6 +26,7 @@ import { useWebSocketStore } from './ws';
 import { useAuthStore } from './auth';
 import type { BughouseData, CgApi, PlayerInfo, PocketData } from '@/api/chess/chess.model';
 import type { ChatMessage } from '@/components/common/ChatComponent/types';
+import { playSound } from '@/utils/sounds';
 
 export const useGameStore = defineStore('game', () => {
   const ws = useWebSocketStore();
@@ -104,6 +105,10 @@ export const useGameStore = defineStore('game', () => {
 
   const preMDCache = shallowRef<{ from: Key; to: Key } | { role: Role; key: Key } | null>(null);
 
+  // Set to true by capture handlers before updateBoardState/updateMateBoardState runs,
+  // so those functions know to play Capture instead of Move.
+  let pendingCaptureSound = false;
+
   // Register the Chessground instance created by a ChessBoard component.
   // Also syncs the board to the latest known config (handles reconnect before remount).
   const registerMainBoard = (cgApi: CgApi) => {
@@ -168,6 +173,11 @@ export const useGameStore = defineStore('game', () => {
       },
     };
     mainCgApi.value?.set(patch);
+
+    if (check) playSound('Check');
+    else if (pendingCaptureSound) playSound('Capture');
+    else playSound('Move');
+    pendingCaptureSound = false;
   };
 
   const updateMateBoardState = (lastMove: Key[]) => {
@@ -181,6 +191,11 @@ export const useGameStore = defineStore('game', () => {
       ...patch,
     };
     mateCgApi.value?.set(patch);
+
+    if (check) playSound('Check');
+    else if (pendingCaptureSound) playSound('Capture');
+    else playSound('Move');
+    pendingCaptureSound = false;
   };
 
   // In Bughouse, captured pieces go to the partner's board, not the capturer's pocket.
@@ -203,6 +218,7 @@ export const useGameStore = defineStore('game', () => {
     else matePockets.value.opponent[pocketRole]++;
 
     mateApi.value.pockets![capturedPiece.color][pocketRole]++;
+    pendingCaptureSound = true;
   };
 
   // Route a mate-board capture to the correct main-board pocket.
@@ -215,6 +231,7 @@ export const useGameStore = defineStore('game', () => {
     mainPockets.value[capturedPiece.color][pocketRole]++;
 
     api.value.pockets![capturedPiece.color][pocketRole]++;
+    pendingCaptureSound = true;
   };
 
   const promote = (promotion: Exclude<Role, 'king' | 'pawn'>) => {
@@ -293,6 +310,7 @@ export const useGameStore = defineStore('game', () => {
       const mateColor = mainBoardState.value?.orientation === 'white' ? 'black' : 'white';
       mateApi.value!.pockets![mateColor]['pawn']++;
       mainCgApi.value?.setPieces(new Map([[chessIdxToSqr(epCaptureSquare), undefined]]));
+      pendingCaptureSound = true;
     }
     // Normal captures are handled by the events.move handler (applyMainBoardCapture).
     playWithPocketRestore(api, { from, to });
@@ -398,6 +416,7 @@ export const useGameStore = defineStore('game', () => {
         matePockets.value.opponent['pawn']++;
         mateApi.value!.pockets![myColor!]['pawn']++;
         mainCgApi.value?.setPieces(new Map([[chessIdxToSqr(epCaptureSquare), undefined]]));
+        pendingCaptureSound = true;
       }
 
       // Mark opponent's promoted piece so future captures of it correctly revert to pawn.
@@ -520,6 +539,17 @@ export const useGameStore = defineStore('game', () => {
       mainBoardState.value = { ...mainBoardState.value, movable: disabledMovable };
     }
     mainCgApi.value?.set({ movable: disabledMovable });
+
+    if (data.status === 'Draw' || data.status === 'Abort') {
+      playSound('Draw');
+    } else if (
+      (data.status === 'WinA' && myTeamIdx.value === 0) ||
+      (data.status === 'WinB' && myTeamIdx.value === 1)
+    ) {
+      playSound('Victory');
+    } else {
+      playSound('Defeat');
+    }
   };
 
   /**
