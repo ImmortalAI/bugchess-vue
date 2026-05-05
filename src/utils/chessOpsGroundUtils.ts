@@ -75,3 +75,5 @@ export const copyPocket = (pocket: PocketData): PocketData => ({
   rook: pocket.rook,
   queen: pocket.queen,
 });
+
+export const turnColorInvert = (color: Color) => (color === 'white' ? 'black' : 'white');

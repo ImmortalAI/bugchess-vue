@@ -32,6 +32,10 @@ const opponentColor = computed<Color>(() => (myColor.value === 'white' ? 'black'
 const mainMyPocket = computed(() => game.mainPockets?.[myColor.value]);
 const mainOpponentPocket = computed(() => game.mainPockets?.[opponentColor.value]);
 
+// Pockets for the mate board. Partner plays the opponent's color on the mate board.
+const matePocketPartner = computed(() => game.matePockets?.[opponentColor.value]);
+const matePocketOpponent = computed(() => game.matePockets?.[myColor.value]);
+
 // Mobile: toggle between main board and mate board.
 const boardReversed = ref(false);
 
@@ -95,8 +99,8 @@ const quickMessages = [
 
       <div :class="{ hidden: !boardReversed }">
         <ChessBoard class="w-full" class-board="w-full aspect-square" class-pocket-row="px-2"
-          :config="game.mateBoardState" :is-promoting="false" :pockets="game.matePockets?.partner"
-          :pockets-opponent="game.matePockets?.opponent" pockets-orientation="horizontal"
+          :config="game.mateBoardState" :is-promoting="false" :pockets="matePocketPartner"
+          :pockets-opponent="matePocketOpponent" pockets-orientation="horizontal"
           @ready="game.registerMateBoard">
           <template #pocket-top-extra>
             <ChessClock :remaining-ms="game.clocks[game.enemyClockId].remainingMs"
@@ -142,7 +146,7 @@ const quickMessages = [
     <!-- Right panel: mate board + player info + chat -->
     <div class="flex flex-col gap-2">
       <ChessBoard class-board="size-96" :config="game.mateBoardState" :is-promoting="false"
-        :pockets="game.matePockets?.partner" :pockets-opponent="game.matePockets?.opponent"
+        :pockets="matePocketPartner" :pockets-opponent="matePocketOpponent"
         pockets-orientation="vertical" @ready="game.registerMateBoard" />
       <div class="flex gap-2 px-1">
         <PlayerPanel :username="game.players?.partner.username ?? '...'"
