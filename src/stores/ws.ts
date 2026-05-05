@@ -56,7 +56,9 @@ export const useWebSocketStore = defineStore('websocket', () => {
         console.error('WebSocket error:', e);
       },
       onDisconnected(_ws, e) {
-        toast.error(e?.reason ? t('ws.disconnectedWithReason', { reason: e.reason }) : t('ws.disconnected'));
+        toast.error(
+          e?.reason ? t('ws.disconnectedWithReason', { reason: e.reason }) : t('ws.disconnected'),
+        );
         console.error('WebSocket disconnected:', e);
       },
       onMessage: processMessage,
@@ -119,9 +121,7 @@ export const useWebSocketStore = defineStore('websocket', () => {
         const username = team?.[(idx % 2) as 0 | 1]?.username ?? 'A player';
         lobby.clearSlot(data.data);
         toast.info(
-          reason === 'kick'
-            ? t('ws.playerKicked', { username })
-            : t('ws.playerLeft', { username }),
+          reason === 'kick' ? t('ws.playerKicked', { username }) : t('ws.playerLeft', { username }),
         );
         break;
       }
@@ -131,6 +131,7 @@ export const useWebSocketStore = defineStore('websocket', () => {
         game.setup(data.data);
         session.setGame();
         if (router.currentRoute.value.name === 'Lobby') router.push('/match');
+        else session.updateView();
         break;
       case WsMsgType.GAME_MOVE_RECEIVE:
         game.receiveMove(data.data);

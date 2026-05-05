@@ -6,16 +6,17 @@ import {
   copyPocket,
   getEnPassantCaptureSquare,
   isFLLine,
+  turnColorInvert,
 } from '@/utils/chessOpsGroundUtils';
 import type { Config } from '@lichess-org/chessground/config';
-import type { File, Key, Piece } from '@lichess-org/chessground/types';
+import type { File, Key } from '@lichess-org/chessground/types';
 import { makeFen, parseFen } from 'chessops/fen';
 import { makeUci, parseUci } from 'chessops/util';
 import type { Color, Move, Role, Square } from 'chessops/types';
 import { parseSquare } from 'chessops/util';
 import { Crazyhouse } from 'chessops/variant';
 import { defineStore } from 'pinia';
-import { computed, ref, shallowRef, type ShallowRef } from 'vue';
+import { computed, ref, shallowRef } from 'vue';
 import {
   WsMsgType,
   type WsGameMoveReceive,
@@ -60,7 +61,7 @@ export const useGameStore = defineStore('game', () => {
 
   // Pockets of both players on the mate (partner's) board.
   // partner = pieces the partner can drop; opponent = pieces the partner's opponent can drop.
-  const matePockets = ref<{ partner: PocketData; opponent: PocketData } | null>(null);
+  const matePockets = ref<{ white: PocketData; black: PocketData } | null>(null);
 
   // Display info for all four participants.
   const players = ref<{
@@ -172,7 +173,10 @@ export const useGameStore = defineStore('game', () => {
         dests,
       },
     };
-    mainCgApi.value?.set(patch);
+
+    if (!mainCgApi.value) return;
+
+    mainCgApi.value.set(patch);
 
     if (check) playSound('Check');
     else if (pendingCaptureSound) playSound('Capture');
@@ -190,7 +194,10 @@ export const useGameStore = defineStore('game', () => {
       fen: makeFen(mateApi.value.toSetup()),
       ...patch,
     };
-    mateCgApi.value?.set(patch);
+
+    if (!mateCgApi.value) return;
+
+    mateCgApi.value.set(patch);
 
     if (check) playSound('Check');
     else if (pendingCaptureSound) playSound('Capture');
@@ -200,38 +207,42 @@ export const useGameStore = defineStore('game', () => {
 
   // In Bughouse, captured pieces go to the partner's board, not the capturer's pocket.
   // Restore pockets after every move to prevent chessops from incorrectly crediting pockets.
-  const playWithPocketRestore = (apiRef: ShallowRef<Crazyhouse | null>, move: Move) => {
-    const pocketsBefore = apiRef.value!.pockets!.clone();
-    apiRef.value!.play(move);
-    apiRef.value!.pockets = pocketsBefore;
+  const apiPlay = (move: Move) => {
+    if (!api.value || !mateApi.value) return;
+
+    if ('from' in move) {
+      const capture = api.value.board.get(move.to);
+      if (capture) {
+        matePockets.value![capture.color][capture.role as Exclude<Role, 'king'>]++;
+        mateApi.value.pockets![capture.color][capture.role]++;
+        pendingCaptureSound = true;
+      }
+    }
+
+    const pocketsBefore = api.value.pockets!.clone();
+
+    api.value.play(move);
+
+    api.value.pockets = pocketsBefore;
   };
 
-  // Route a main-board capture to the correct mate-board pocket.
-  // mateBoardState orientation is the partner's color, so it directly selects the bucket.
-  const applyMainBoardCapture = (capturedPiece: Piece) => {
-    if (!matePockets.value || !mateApi.value) return;
-    const role = capturedPiece.promoted ? 'pawn' : capturedPiece.role;
-    if (role === 'king') return;
-    const pocketRole = role as Exclude<Role, 'king'>;
-    if (capturedPiece.color === mateBoardState.value?.orientation)
-      matePockets.value.partner[pocketRole]++;
-    else matePockets.value.opponent[pocketRole]++;
+  const mateApiPlay = (move: Move) => {
+    if (!api.value || !mateApi.value) return;
 
-    mateApi.value.pockets![capturedPiece.color][pocketRole]++;
-    pendingCaptureSound = true;
-  };
+    if ('from' in move) {
+      const capture = mateApi.value.board.get(move.to);
+      if (capture) {
+        mainPockets.value![capture.color][capture.role as Exclude<Role, 'king'>]++;
+        api.value.pockets![capture.color][capture.role]++;
+        pendingCaptureSound = true;
+      }
+    }
 
-  // Route a mate-board capture to the correct main-board pocket.
-  // Captured pieces keep their color — the color directly keys into mainPockets.
-  const applyMateBoardCapture = (capturedPiece: Piece) => {
-    if (!mainPockets.value || !api.value) return;
-    const role = capturedPiece.promoted ? 'pawn' : capturedPiece.role;
-    if (role === 'king') return;
-    const pocketRole = role as Exclude<Role, 'king'>;
-    mainPockets.value[capturedPiece.color][pocketRole]++;
+    const pocketsBefore = mateApi.value.pockets!.clone();
 
-    api.value.pockets![capturedPiece.color][pocketRole]++;
-    pendingCaptureSound = true;
+    mateApi.value.play(move);
+
+    mateApi.value.pockets = pocketsBefore;
   };
 
   const promote = (promotion: Exclude<Role, 'king' | 'pawn'>) => {
@@ -264,7 +275,7 @@ export const useGameStore = defineStore('game', () => {
     // Promotion capture is reported by events.move on the main board (fired when
     // the pawn moved to the promotion square during the user's drag). No manual
     // capture detection needed here.
-    playWithPocketRestore(api, { from, to, promotion });
+    apiPlay({ from, to, promotion });
 
     // Mark the promoted piece so Chessground knows it reverts to a pawn on capture.
     const cgTo = chessIdxToSqr(to);
@@ -306,14 +317,14 @@ export const useGameStore = defineStore('game', () => {
     const isEp = to === api.value.epSquare && api.value.board.get(from)?.role === 'pawn';
     const epCaptureSquare = isEp ? getEnPassantCaptureSquare(to, api.value.turn) : null;
     if (epCaptureSquare !== null && matePockets.value) {
-      matePockets.value.partner['pawn']++;
-      const mateColor = mainBoardState.value?.orientation === 'white' ? 'black' : 'white';
+      const mateColor = turnColorInvert(mainBoardState.value?.orientation ?? 'white');
+      matePockets.value[mateColor]['pawn']++;
       mateApi.value!.pockets![mateColor]['pawn']++;
       mainCgApi.value?.setPieces(new Map([[chessIdxToSqr(epCaptureSquare), undefined]]));
       pendingCaptureSound = true;
     }
     // Normal captures are handled by the events.move handler (applyMainBoardCapture).
-    playWithPocketRestore(api, { from, to });
+    apiPlay({ from, to });
     updateBoardState([orig, dest]);
     toggleClock('main');
     syncClock(myClockId.value, clocks[myClockId.value].remainingMs + incr.value);
@@ -404,7 +415,7 @@ export const useGameStore = defineStore('game', () => {
       const epCaptureSquare = isEp ? getEnPassantCaptureSquare(parsed.to, moverColor) : null;
 
       // Normal captures are handled by the events.move handler (applyMainBoardCapture).
-      playWithPocketRestore(api, parsed);
+      apiPlay(parsed);
 
       const cgFrom = chessIdxToSqr(parsed.from);
       const cgTo = chessIdxToSqr(parsed.to);
@@ -413,7 +424,7 @@ export const useGameStore = defineStore('game', () => {
       // En passant move
       if (epCaptureSquare !== null && matePockets.value) {
         const myColor = mainBoardState.value?.orientation;
-        matePockets.value.opponent['pawn']++;
+        matePockets.value[myColor!]['pawn']++;
         mateApi.value!.pockets![myColor!]['pawn']++;
         mainCgApi.value?.setPieces(new Map([[chessIdxToSqr(epCaptureSquare), undefined]]));
         pendingCaptureSound = true;
@@ -466,22 +477,25 @@ export const useGameStore = defineStore('game', () => {
         const cgTo = chessIdxToSqr(parsed.to);
 
         // En passant: detect BEFORE playing — epSquare is cleared by play().
+        const turnColor = mateApi.value.turn;
         const isEp =
           parsed.to === mateApi.value.epSquare &&
           mateApi.value.board.get(parsed.from)?.role === 'pawn';
-        const epCaptureSquare = isEp
-          ? getEnPassantCaptureSquare(parsed.to, mateApi.value.turn)
-          : null;
-        if (isEp) {
-          applyMateBoardCapture({
-            role: 'pawn',
-            color: mateApi.value.turn === 'white' ? 'black' : 'white',
-          });
-        }
+        const epCaptureSquare = isEp ? getEnPassantCaptureSquare(parsed.to, turnColor) : null;
 
-        playWithPocketRestore(mateApi, parsed);
+        mateApiPlay(parsed);
         // Animate the move — fires events.move with capturedPiece for normal captures.
         mateCgApi.value?.move(cgFrom, cgTo);
+
+        // En passant move
+        if (epCaptureSquare !== null && mainPockets.value) {
+          const captureColor = turnColorInvert(turnColor);
+          mainPockets.value[captureColor]['pawn']++;
+          api.value!.pockets![captureColor]['pawn']++;
+          mainCgApi.value?.setPieces(new Map([[chessIdxToSqr(epCaptureSquare), undefined]]));
+          pendingCaptureSound = true;
+        }
+
         if (epCaptureSquare !== null)
           mateCgApi.value?.setPieces(new Map([[chessIdxToSqr(epCaptureSquare), undefined]]));
 
@@ -497,14 +511,9 @@ export const useGameStore = defineStore('game', () => {
         // Drop on mate board.
         const dropperColor = mateApi.value.turn;
         const cgTo = chessIdxToSqr(parsed.to);
-        playWithPocketRestore(mateApi, parsed);
+        mateApiPlay(parsed);
 
-        if (matePockets.value) {
-          const pocketRole = parsed.role as Exclude<Role, 'king'>;
-          const partnerColorOnMate = mateBoardState.value?.orientation as Color | undefined;
-          if (dropperColor === partnerColorOnMate) matePockets.value.partner[pocketRole]--;
-          else matePockets.value.opponent[pocketRole]--;
-        }
+        matePockets.value![dropperColor][parsed.role as Exclude<Role, 'king'>]--;
 
         mateCgApi.value?.newPiece({ role: parsed.role, color: dropperColor }, cgTo);
         lastMove = [cgTo];
@@ -628,8 +637,8 @@ export const useGameStore = defineStore('game', () => {
 
     // Set up mate board pockets from the chessops state initialized from FEN.
     matePockets.value = {
-      partner: copyPocket(mateApi.value.pockets[partner.color]),
-      opponent: copyPocket(mateApi.value.pockets[partnerEnemy.color]),
+      white: copyPocket(mateApi.value.pockets.white),
+      black: copyPocket(mateApi.value.pockets.black),
     };
 
     if (myBoard.autoAbortAt) {
@@ -696,11 +705,6 @@ export const useGameStore = defineStore('game', () => {
           unset: () => (preMDCache.value = null),
         },
       },
-      events: {
-        move: (_orig: Key, _dest: Key, capturedPiece?: Piece) => {
-          if (capturedPiece) applyMainBoardCapture(capturedPiece);
-        },
-      },
       check,
       lastMove: myBoard.lastMove ?? undefined,
     };
@@ -709,11 +713,6 @@ export const useGameStore = defineStore('game', () => {
       fen: mateBoard.fen,
       orientation: opponentColor,
       viewOnly: true,
-      events: {
-        move: (_orig: Key, _dest: Key, capturedPiece?: Piece) => {
-          if (capturedPiece) applyMateBoardCapture(capturedPiece);
-        },
-      },
       check: mateApi.value.isCheck(),
       lastMove: mateBoard.lastMove ?? undefined,
     };
