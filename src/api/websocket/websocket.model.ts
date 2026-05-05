@@ -145,8 +145,11 @@ export type WsGameMoveReceive = WsGameMove & {
   blackClockTime: number;
 };
 
-/** A chat message between teammates; plain string content. */
-export type WsGameChat = string;
+/** Outgoing chat message from the client: plain text string. */
+export type WsGameChatSend = string;
+
+/** Incoming chat message from the server: sender username and message text. */
+export type WsGameChatReceive = { username: string; text: string };
 
 /** Payload for `GAME_END`: final result and per-player rating changes. */
 export type WsGameEndData = {
@@ -281,7 +284,7 @@ export type WsGameMoveMsg = { type: (typeof WsMsgType)['GAME_MOVE']; data: WsGam
 /** Send a chat message to the teammate on the same team. */
 export type WsGameChatSendMsg = {
   type: (typeof WsMsgType)['GAME_CHAT_MSG_SEND'];
-  data: WsGameChat;
+  data: WsGameChatSend;
 };
 
 /** Resign the current game. */
@@ -301,7 +304,7 @@ export type WsGameOpponentMoveMsg = {
 /** Sent to teammates when a chat message is received from a team member. */
 export type WsGameChatReceiveMsg = {
   type: (typeof WsMsgType)['GAME_CHAT_MSG_RECEIVE'];
-  data: WsGameChat;
+  data: WsGameChatReceive;
 };
 
 /** Sent to all game players when the game ends; carries result and rating deltas. */

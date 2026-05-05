@@ -26,6 +26,8 @@ export type BoardData = {
   players: [PlayerData, PlayerData];
   /** Squares of the last move — two squares normally, one square for a drop; null at game start. */
   lastMove: [Key, Key] | [Key] | null;
+  /** UTC timestamp (ms) by which both players must make their first move or the game is aborted; null after the game has started. */
+  autoAbortAt: number | null;
 };
 
 /** Identity and rating of a participant shown in the UI. */

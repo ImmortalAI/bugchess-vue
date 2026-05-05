@@ -590,13 +590,27 @@ export const useGameStore = defineStore('game', () => {
     const mainTurnColor = isGameStarted(fenSetup) ? fenSetup.turn : null;
     const mateTurnColor = isGameStarted(mateFenSetup) ? mateFenSetup.turn : null;
 
-    resetClock('mainWhite', Math.max(0, myBoard.players[0].clockTime));
-    resetClock('mainBlack', Math.max(0, myBoard.players[1].clockTime));
-    resetClock('mateWhite', Math.max(0, mateBoard.players[0].clockTime));
-    resetClock('mateBlack', Math.max(0, mateBoard.players[1].clockTime));
+    if (myBoard.autoAbortAt && !mainTurnColor) {
+      const mainAutoAbortMs = Math.max(0, myBoard.autoAbortAt - Date.now());
+      resetClock('mainWhite', mainAutoAbortMs);
+      resetClock('mainBlack', mainAutoAbortMs);
+      startClock('mainWhite');
+    } else {
+      resetClock('mainWhite', Math.max(0, myBoard.players[0].clockTime));
+      resetClock('mainBlack', Math.max(0, myBoard.players[1].clockTime));
+      if (mainTurnColor) startClock(colorToClockId(mainTurnColor, 'main'));
+    }
 
-    if (mainTurnColor) startClock(colorToClockId(mainTurnColor, 'main'));
-    if (mateTurnColor) startClock(colorToClockId(mateTurnColor, 'mate'));
+    if (mateBoard.autoAbortAt && !mateTurnColor) {
+      const mateAutoAbortMs = Math.max(0, mateBoard.autoAbortAt - Date.now());
+      resetClock('mateWhite', mateAutoAbortMs);
+      resetClock('mateBlack', mateAutoAbortMs);
+      startClock('mateWhite');
+    } else {
+      resetClock('mateWhite', Math.max(0, mateBoard.players[0].clockTime));
+      resetClock('mateBlack', Math.max(0, mateBoard.players[1].clockTime));
+      if (mateTurnColor) startClock(colorToClockId(mateTurnColor, 'mate'));
+    }
 
     const turnColor = api.value.turn;
     const isOurTurn = turnColor === myColor;
