@@ -384,10 +384,8 @@ export const useGameStore = defineStore('game', () => {
 
       // Mark opponent's promoted piece so future captures of it correctly revert to pawn.
       if (parsed.promotion) {
-        const opponentColor: Color =
-          mainBoardState.value?.orientation === 'white' ? 'black' : 'white';
         mainCgApi.value?.setPieces(
-          new Map([[cgTo, { role: parsed.promotion, color: opponentColor, promoted: true }]]),
+          new Map([[cgTo, { role: parsed.promotion, color: moverColor, promoted: true }]]),
         );
       }
 
@@ -396,6 +394,10 @@ export const useGameStore = defineStore('game', () => {
       // Drop: chessops correctly decrements the opponent's pocket (initialized from cfg teams).
       api.value.play(parsed);
       if (mainPockets.value) mainPockets.value[moverColor][parsed.role as Exclude<Role, 'king'>]--;
+
+      const cgTo = chessIdxToSqr(parsed.to);
+      mainCgApi.value?.setPieces(new Map([[cgTo, { role: parsed.role, color: moverColor }]]));
+
       updateBoardState([chessIdxToSqr(parsed.to)]);
     }
 
