@@ -224,6 +224,21 @@ export const useGameStore = defineStore('game', () => {
       throw new ChessError('Promotion move cache is empty');
     }
 
+    if (
+      !api.value.isLegal({
+        from: promotionMoveCache.value.from,
+        to: promotionMoveCache.value.to,
+        promotion,
+      })
+    ) {
+      throw new ChessError(
+        'Invalid promotion move: ' +
+          promotionMoveCache.value.from +
+          ' -> ' +
+          promotionMoveCache.value.to,
+      );
+    }
+
     const { from, to } = promotionMoveCache.value;
     const uci = makeUci({ from, to, promotion });
 
@@ -256,14 +271,14 @@ export const useGameStore = defineStore('game', () => {
       throw new ChessError('Invalid move keys: ' + orig + ' -> ' + dest);
     }
 
-    if (!api.value.isLegal({ from, to })) {
-      throw new ChessError('Invalid move: ' + orig + ' -> ' + dest);
-    }
-
     if (api.value.board.get(from)?.role === 'pawn' && isFLLine(api.value.turn, dest)) {
       promotionMoveCache.value = { from, to };
       isPromoting.value = true;
       return;
+    }
+
+    if (!api.value.isLegal({ from, to })) {
+      throw new ChessError('Invalid move: ' + orig + ' -> ' + dest);
     }
 
     const uci = makeUci({ from, to });
