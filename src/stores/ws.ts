@@ -131,7 +131,6 @@ export const useWebSocketStore = defineStore('websocket', () => {
         game.setup(data.data);
         session.setGame();
         if (router.currentRoute.value.name === 'Lobby') router.push('/match');
-        else session.updateView();
         break;
       case WsMsgType.GAME_MOVE_RECEIVE:
         game.receiveMove(data.data);

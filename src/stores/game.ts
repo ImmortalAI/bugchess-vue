@@ -27,6 +27,7 @@ import { useAuthStore } from './auth';
 import type { BughouseData, CgApi, PlayerInfo, PocketData } from '@/api/chess/chess.model';
 import type { ChatMessage } from '@/components/common/ChatComponent/types';
 import { playSound } from '@/utils/sounds';
+import { useSessionStore } from './session';
 
 export const useGameStore = defineStore('game', () => {
   const ws = useWebSocketStore();
@@ -564,11 +565,9 @@ export const useGameStore = defineStore('game', () => {
    * Called on both fresh GAME_JOIN and SYNC while in a game.
    */
   const setup = (data: BughouseData | null) => {
-    // Clear state if server returned null (game not started yet).
-    if (data === null) {
-      clear();
-      return;
-    }
+    clear();
+
+    if (data === null) return;
 
     gameStatus.value = data.status;
     incr.value = data.incr;
@@ -738,6 +737,7 @@ export const useGameStore = defineStore('game', () => {
     myTeamIdx.value = 0;
     gameStatus.value = null;
     clearClocks();
+    useSessionStore().updateView();
   };
 
   return {
