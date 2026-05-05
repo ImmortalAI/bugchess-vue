@@ -78,7 +78,8 @@
       "aborted": "Игра отменена"
     },
     "resign": "Сдаться",
-    "resignConfirm": "Подтвердить сдачу"
+    "resignConfirm": "Подтвердить сдачу",
+    "backToLobby": "Вернуться в лобби"
   },
   "chat": {
     "title": "Чат",

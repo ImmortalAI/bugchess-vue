@@ -1,6 +1,8 @@
 import type { WsUserState } from '@/api/websocket/websocket.model';
+import { WsMsgType } from '@/api/websocket/websocket.model';
 import { defineStore } from 'pinia';
 import { computed, ref } from 'vue';
+import { useWebSocketStore } from './ws';
 
 export type PlayerState = 'Idle' | 'Lobby' | 'Game';
 
@@ -40,6 +42,11 @@ export const useSessionStore = defineStore('session', () => {
     pendingInvite.value = uid;
   };
 
+  const returnToLobby = () => {
+    useWebSocketStore().sendMessage({ type: WsMsgType.REQ_SYNC, data: {} });
+    setIdle();
+  };
+
   return {
     state,
     initialized,
@@ -52,5 +59,6 @@ export const useSessionStore = defineStore('session', () => {
     setGame,
     setState,
     setPendingInvite,
+    returnToLobby,
   };
 });

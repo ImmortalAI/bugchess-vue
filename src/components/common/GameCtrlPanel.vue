@@ -4,6 +4,7 @@ import { useTranslation } from '@/composables/useTranslation';
 import { cn } from '@/lib/utils';
 import ConfirmButton from './ConfirmButton.vue';
 import SimpleChatRoot from './SimpleChat/SimpleChatRoot.vue';
+import { Button } from '@/components/ui/button';
 import type { ChatMessage } from './ChatComponent/types';
 import type { BughouseData } from '@/api/chess/chess.model';
 
@@ -19,6 +20,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   send: [message: string];
   resign: [];
+  leave: [];
 }>();
 
 const { t } = useTranslation();
@@ -45,10 +47,13 @@ const resultText = computed(() => {
       :disabled="disabled || !!gameStatus"
       @send="emit('send', $event)"
     />
+    <Button v-if="gameStatus" variant="outline" @click="emit('leave')">
+      {{ t('match.backToLobby') }}
+    </Button>
     <ConfirmButton
+      v-else
       :label="t('match.resign')"
       :confirm-label="t('match.resignConfirm')"
-      :disabled="!!gameStatus"
       @confirm="emit('resign')"
     />
   </div>
