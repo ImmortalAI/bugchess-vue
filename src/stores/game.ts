@@ -17,14 +17,17 @@ import { parseSquare } from 'chessops/util';
 import { Crazyhouse } from 'chessops/variant';
 import { defineStore } from 'pinia';
 import { computed, ref, shallowRef } from 'vue';
-import {
-  WsMsgType,
-  type WsGameMoveReceive,
-  type WsGameEndData,
-} from '@/api/websocket/websocket.model';
+import { WsMsgType } from '@/api/websocket/websocket.model';
 import { useWebSocketStore } from './ws';
 import { useAuthStore } from './auth';
-import type { BughouseData, CgApi, PlayerInfo, PocketData } from '@/api/chess/chess.model';
+import type {
+  BughouseData,
+  CgApi,
+  GameEndData,
+  GameMoveReceiveData,
+  PlayerInfo,
+  PocketData,
+} from '@/api/chess/chess.model';
 import type { ChatMessage } from '@/components/common/ChatComponent/types';
 import { playSound } from '@/utils/sounds';
 import { useSessionStore } from './session';
@@ -454,7 +457,7 @@ export const useGameStore = defineStore('game', () => {
   };
 
   /** Route an incoming move to the correct board handler. */
-  const receiveMove = (data: WsGameMoveReceive) => {
+  const receiveMove = (data: GameMoveReceiveData) => {
     if (data.idx === myBoardIdx.value) {
       moveOpponent(data.move);
 
@@ -539,7 +542,7 @@ export const useGameStore = defineStore('game', () => {
     ws.sendMessage({ type: WsMsgType.GAME_RESIGN, data: {} });
   };
 
-  const onGameEnd = (data: WsGameEndData) => {
+  const onGameEnd = (data: GameEndData) => {
     gameStatus.value = data.status;
     stopAllClocks();
     const disabledMovable = { color: undefined, dests: new Map<Key, Key[]>() };

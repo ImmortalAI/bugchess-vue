@@ -8,3 +8,9 @@ export type ActionResult = {
 export type ApiErrorResponse = {
   detail: string;
 };
+
+/** Server-side error delivered through the WebSocket protocol. */
+export type ServerErrorData = {
+  code: string | null;
+  message: string | null;
+};

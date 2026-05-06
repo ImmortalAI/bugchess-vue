@@ -13,6 +13,7 @@ import { useSessionStore } from '@/stores/session';
 import { useAuthStore } from '@/stores/auth';
 import { useWebSocketStore } from '@/stores/ws';
 import { WsMsgType } from '@/api/websocket/websocket.model';
+import type { LobbySlotIndex } from '@/api/lobby/lobby.model';
 import { usersActive } from '@/api/users/users.service';
 import { computed, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
@@ -70,10 +71,10 @@ const toggleMatchmaking = () => {
 };
 
 const inviteDialogOpen = ref(false);
-const inviteSlotIdx = ref(0);
+const inviteSlotIdx = ref<LobbySlotIndex>(0);
 const inviteUsers = ref<string[]>([]);
 
-const openInviteDialog = async (slotIdx: number) => {
+const openInviteDialog = async (slotIdx: LobbySlotIndex) => {
   inviteSlotIdx.value = slotIdx;
   inviteUsers.value = await usersActive();
   inviteDialogOpen.value = true;
