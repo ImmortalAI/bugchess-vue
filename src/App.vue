@@ -29,7 +29,8 @@ onMounted(async () => {
     <RouterView :key="session.viewKey" />
   </div>
   <div
-    class="pointer-events-none fixed bottom-2 left-2 z-50 select-none text-[10px] font-medium text-muted-foreground/60">
+    class="pointer-events-none fixed bottom-2 left-2 z-50 select-none text-[10px] font-medium text-muted-foreground/60"
+  >
     {{ appBuildLabel }}
   </div>
   <Toaster />
