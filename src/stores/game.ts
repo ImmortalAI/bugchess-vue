@@ -215,8 +215,11 @@ export const useGameStore = defineStore('game', () => {
     if ('from' in move) {
       const capture = api.value.board.get(move.to);
       if (capture) {
-        matePockets.value![capture.color][capture.role as Exclude<Role, 'king'>]++;
-        mateApi.value.pockets![capture.color][capture.role]++;
+        const color = capture.color;
+        const role = (capture.promoted ? 'pawn' : capture.role) as Exclude<Role, 'king'>;
+
+        matePockets.value![color][role]++;
+        mateApi.value.pockets![color][role]++;
         pendingCaptureSound = true;
       }
     }
@@ -234,8 +237,11 @@ export const useGameStore = defineStore('game', () => {
     if ('from' in move) {
       const capture = mateApi.value.board.get(move.to);
       if (capture) {
-        mainPockets.value![capture.color][capture.role as Exclude<Role, 'king'>]++;
-        api.value.pockets![capture.color][capture.role]++;
+        const color = capture.color;
+        const role = (capture.promoted ? 'pawn' : capture.role) as Exclude<Role, 'king'>;
+
+        mainPockets.value![color][role]++;
+        api.value.pockets![color][role]++;
         pendingCaptureSound = true;
       }
     }
