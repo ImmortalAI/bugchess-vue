@@ -19,10 +19,10 @@ export type BughouseStatus = GameResultStatus | null;
 export type LastMoveData = [Key, Key] | [Key] | null;
 
 /** Piece roles that can be stored in a Bughouse/Crazyhouse pocket. */
-export type ChessPiece = Exclude<Role, 'king'>;
+export type PocketPiece = Exclude<Role, 'king'>;
 
 /** Number of each piece type currently available for a drop move. */
-export type PocketData = Pick<MaterialSide, ChessPiece>;
+export type PocketData = Pick<MaterialSide, PocketPiece>;
 
 /** State of one player on a board: identity, color, and clock. */
 export type PlayerData = {

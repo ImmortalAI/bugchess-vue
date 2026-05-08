@@ -6,16 +6,12 @@ import { useGameStore } from './game';
 import { useSessionStore } from './session';
 import { useLobbyStore } from './lobby';
 import { useTranslation } from '@/composables/useTranslation';
-import {
-  WsMsgType,
-  type WsIncomingData,
-  type WsOutgoingData,
-} from '@/api/websocket/websocket.model';
+import { WsMsgType, type WsIncomingMsg, type WsOutgoingMsg } from '@/api/websocket/websocket.model';
 import { makeWsUrl } from '@/utils/wsUrl';
 import router from '@/router';
 
 export const useWebSocketStore = defineStore('websocket', () => {
-  const instance = shallowRef<ReturnType<typeof useWebSocket<WsIncomingData>> | null>(null);
+  const instance = shallowRef<ReturnType<typeof useWebSocket<WsIncomingMsg>> | null>(null);
 
   const initialized = computed(() => !!instance.value && instance.value.status.value === 'OPEN');
 
@@ -32,7 +28,7 @@ export const useWebSocketStore = defineStore('websocket', () => {
       return;
     }
 
-    instance.value = useWebSocket<WsIncomingData>(makeWsUrl(), {
+    instance.value = useWebSocket<WsIncomingMsg>(makeWsUrl(), {
       heartbeat: {
         message: JSON.stringify({ type: WsMsgType.PING, data: {} }),
         scheduler: (cb) => useIntervalFn(cb, 5000),
@@ -66,9 +62,9 @@ export const useWebSocketStore = defineStore('websocket', () => {
   };
 
   const processMessage = (_ws: WebSocket, message: MessageEvent) => {
-    let data: WsIncomingData;
+    let data: WsIncomingMsg;
     try {
-      data = JSON.parse(message.data as string) as WsIncomingData;
+      data = JSON.parse(message.data as string) as WsIncomingMsg;
     } catch {
       console.error('Failed to parse WebSocket message:', message.data);
       return;
@@ -151,7 +147,7 @@ export const useWebSocketStore = defineStore('websocket', () => {
     }
   };
 
-  const sendMessage = (data: WsOutgoingData) => {
+  const sendMessage = (data: WsOutgoingMsg) => {
     if (!initialized.value) connect();
 
     instance.value?.send(JSON.stringify(data));

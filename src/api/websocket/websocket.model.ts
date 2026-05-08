@@ -300,7 +300,7 @@ export type WsErrorMsg = { type: (typeof WsMsgType)['ERROR']; data: WsErrorData 
 // *** Union Types ***
 
 /** All message types the client can receive from the server. */
-export type WsIncomingData =
+export type WsIncomingMsg =
   | WsPongMsg
   | WsSyncMsg
   | WsLobbyJoinMsg
@@ -319,7 +319,7 @@ export type WsIncomingData =
   | WsErrorMsg;
 
 /** All message types the client can send to the server. */
-export type WsOutgoingData =
+export type WsOutgoingMsg =
   | WsPingMsg
   | WsReqSyncMsg
   | WsCreateLobbyMsg
@@ -336,4 +336,4 @@ export type WsOutgoingData =
   | WsGameResignMsg;
 
 /** Union of all WebSocket messages (incoming and outgoing). */
-export type WsData = WsIncomingData | WsOutgoingData;
+export type WsMsg = WsIncomingMsg | WsOutgoingMsg;
