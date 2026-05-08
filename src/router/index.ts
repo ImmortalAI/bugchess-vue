@@ -1,24 +1,25 @@
-import { useSessionStore } from '@/stores/session';
 import { createRouter, createWebHistory } from 'vue-router';
 import { routes } from './routes';
+import { useAuthStore } from '@/stores/auth';
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes,
 });
 
-router.beforeEach((to) => {
-  if (to.name !== 'Lobby' && to.name !== 'Game') return;
+router.beforeEach(async (to) => {
+  const p = performance.now();
+  const auth = useAuthStore();
+  console.warn(`Init ${performance.now() - p} ms`);
 
-  const session = useSessionStore();
-  if (!session.initialized) return;
+  if (!auth.initialized && !auth.isAuthenticated) await auth.refresh();
 
-  if (to.name === 'Lobby' && !session.isInLobby) {
-    return session.isInGame ? { name: 'Game' } : { name: 'Home' };
-  }
-  if (to.name === 'Game' && !session.isInGame) {
-    return session.isInLobby ? { name: 'Lobby' } : { name: 'Home' };
-  }
+  console.warn(`Refresh ${performance.now() - p} ms`);
+
+  if (!to.meta.requiredAuth && !to.meta.requiredGuest) return;
+
+  if (to.meta.requiredAuth && !auth.isAuthenticated) return '/signin';
+  if (to.meta.requiredGuest && auth.isAuthenticated) return { name: 'Home' };
 });
 
 export default router;
