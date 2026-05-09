@@ -9,15 +9,20 @@ import { computed, ref } from 'vue';
 import { useGameStore } from './game';
 import { useLobbyStore } from './lobby';
 import { useWebSocketStore } from './ws';
+import router from '@/router';
 
 export const useAuthStore = defineStore('auth', () => {
+  const ws = useWebSocketStore();
+
   const user = ref<UserData | null>(null);
 
+  const initialized = ref(false);
   const isAuthenticated = computed(() => user.value !== null);
 
   const refresh = async (): Promise<ActionResult> => {
     try {
       user.value = await usersMe();
+      ws.connect();
       return { isOk: true, message: '' };
     } catch (e) {
       if (user.value) {
@@ -32,6 +37,8 @@ export const useAuthStore = defineStore('auth', () => {
         };
       }
       return { isOk: false, message: 'User not logged in' };
+    } finally {
+      initialized.value = true;
     }
   };
 
@@ -75,6 +82,7 @@ export const useAuthStore = defineStore('auth', () => {
       useGameStore().clear();
       useLobbyStore().clear();
       useWebSocketStore().disconnect();
+      router.push('/');
       return { isOk: true, message };
     } catch (e) {
       if (isAxiosError(e))
@@ -93,6 +101,7 @@ export const useAuthStore = defineStore('auth', () => {
       useGameStore().clear();
       useLobbyStore().clear();
       useWebSocketStore().disconnect();
+      router.push('/');
       return { isOk: true, message };
     } catch (e) {
       if (isAxiosError(e))
@@ -105,5 +114,5 @@ export const useAuthStore = defineStore('auth', () => {
     }
   };
 
-  return { user, isAuthenticated, refresh, register, login, logout, logoutAll };
+  return { user, isAuthenticated, initialized, refresh, register, login, logout, logoutAll };
 });

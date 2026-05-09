@@ -62,11 +62,7 @@ const isHorizontal = computed(() => props.orientation === 'horizontal');
     <!-- Opponent's captured pieces (top, read-only) -->
     <div v-if="dataOpponent" class="flex flex-col h-1/2">
       <template v-for="p in pieces" :key="p">
-        <DraggablePiece
-          :piece="p"
-          :color="colorOpponent"
-          :count="dataOpponent[p]"
-        />
+        <DraggablePiece :piece="p" :color="colorOpponent" :count="dataOpponent[p]" />
       </template>
     </div>
     <!-- Player's captured pieces (bottom, interactive) -->

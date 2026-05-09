@@ -23,26 +23,41 @@ export const routes: RouteRecordRaw[] = [
         component: () => import('@/components/common/Forms/RegisterForm.vue'),
       },
     ],
+    meta: {
+      requiredGuest: true,
+    },
   },
   {
     name: 'Lobby',
     path: '/lobby',
     component: () => import('@/pages/LobbyPage.vue'),
+    meta: {
+      requiredAuth: true,
+    },
   },
   {
     name: 'Game',
     path: '/match',
     component: () => import('@/pages/MatchPage.vue'),
+    meta: {
+      requiredAuth: true,
+    },
   },
   {
     name: 'Settings',
     path: '/settings',
     component: () => import('@/pages/SettingsPage.vue'),
+    meta: {
+      requiredAuth: true,
+    },
   },
   {
     name: 'Stats',
     path: '/stats',
     component: () => import('@/pages/StatsPage.vue'),
+    meta: {
+      requiredAuth: true,
+    },
   },
   {
     name: 'ServerUnavailable',

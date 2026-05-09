@@ -3,23 +3,15 @@ import 'vue-sonner/style.css';
 import { Toaster } from 'vue-sonner';
 import HeaderComponent from './components/common/HeaderComponent.vue';
 import { useTranslation } from './composables/useTranslation';
-import { useAuthStore } from './stores/auth';
-import { useWebSocketStore } from './stores/ws';
 import { onMounted } from 'vue';
 import { useSessionStore } from './stores/session';
 
 const { restoreLanguage } = useTranslation();
-const auth = useAuthStore();
 const session = useSessionStore();
-const ws = useWebSocketStore();
 const appBuildLabel = __APP_BUILD_LABEL__;
 
 onMounted(async () => {
   restoreLanguage();
-  const result = await auth.refresh();
-  if (result.isOk) {
-    ws.connect();
-  }
 });
 </script>
 

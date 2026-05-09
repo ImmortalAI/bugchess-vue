@@ -15,7 +15,7 @@ const sigma = computed(() => Math.round(auth.user!.sigma));
 onMounted(async () => {
   if (!auth.isAuthenticated) router.push('/signin');
 
-  await auth.refresh()
+  await auth.refresh();
 });
 </script>
 
@@ -30,7 +30,8 @@ onMounted(async () => {
         </CardHeader>
         <CardContent>
           <span
-            class="text-7xl font-black tracking-tight bg-linear-to-br from-primary to-primary/50 bg-clip-text text-transparent">
+            class="text-7xl font-black tracking-tight bg-linear-to-br from-primary to-primary/50 bg-clip-text text-transparent"
+          >
             {{ rating }}
           </span>
           <span class="ml-12">sigma {{ sigma }}</span>

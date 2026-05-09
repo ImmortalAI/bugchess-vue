@@ -1,11 +1,20 @@
-import type { BughouseData } from '../chess/chess.model';
+import type { ServerErrorData } from '../base/base.model';
+import type {
+  BughouseData,
+  GameChatMessageData,
+  GameEndData,
+  GameMoveData,
+  GameMoveReceiveData,
+} from '../chess/chess.model';
 import type {
   LobbyData,
+  LobbyInviteData,
   LobbyPlayerLeaveData,
   LobbyTimeData,
   LobbyTimeRatingData,
   LobbyUpdateSlot,
 } from '../lobby/lobby.model';
+import type { SessionSyncData, UserState } from '../session/session.model';
 
 /** Numeric message type identifiers for all WebSocket messages. */
 export const WsMsgType = {
@@ -90,7 +99,7 @@ export const WsMsgType = {
 export type WsNoData = Record<string, never>;
 
 /** The high-level state a connected player can be in. */
-export type WsUserState = 'IDLE' | 'LOBBY' | 'GAME';
+export type WsUserState = UserState;
 
 /** Full lobby snapshot (alias of `LobbyData`). */
 export type WsLobbyData = LobbyData;
@@ -99,13 +108,7 @@ export type WsLobbyData = LobbyData;
 export type WsGameData = BughouseData;
 
 /** Payload for `SYNC`: the server's authoritative view of the player's current state. */
-export type WsSyncData = {
-  state: WsUserState;
-  /** Present when `state` is `'LOBBY'` or `'GAME'` and a lobby record exists. */
-  lobby: WsLobbyData | null;
-  /** Present when `state` is `'GAME'`. */
-  game: WsGameData | null;
-};
+export type WsSyncData = SessionSyncData;
 
 /** Time control parameters used when creating a lobby. */
 export type WsLobbyTimeData = LobbyTimeData;
@@ -114,11 +117,7 @@ export type WsLobbyTimeData = LobbyTimeData;
 export type WsUsernameData = string;
 
 /** Payload for invite messages: the target slot index and the invited username. */
-export type WsInviteData = {
-  /** 0–3 index of the slot the invite is for. */
-  idx: number;
-  username: string;
-};
+export type WsInviteData = LobbyInviteData;
 
 /** Lobby config payload: time control + rated flag. */
 export type WsLobbyConfigData = LobbyTimeRatingData;
@@ -130,39 +129,22 @@ export type WsLobbyPlayerJoinData = LobbyUpdateSlot;
 export type WsLobbyPlayerLeaveData = LobbyPlayerLeaveData;
 
 /** A single move on one of the two boards. */
-export type WsGameMove = {
-  /** Which board the move was made on: `0` = board A, `1` = board B. */
-  idx: 0 | 1;
-  /** Move in UCI notation (e.g. `"e2e4"`, `"P@f7"` for a drop). */
-  move: string;
-};
+export type WsGameMove = GameMoveData;
 
 /** Extended move payload received from the server; includes updated clock values after the move. */
-export type WsGameMoveReceive = WsGameMove & {
-  /** Remaining time for white on the moved board, in milliseconds. */
-  whiteClockTime: number;
-  /** Remaining time for black on the moved board, in milliseconds. */
-  blackClockTime: number;
-};
+export type WsGameMoveReceive = GameMoveReceiveData;
 
 /** Outgoing chat message from the client: plain text string. */
 export type WsGameChatSend = string;
 
 /** Incoming chat message from the server: sender username and message text. */
-export type WsGameChatReceive = { username: string; text: string };
+export type WsGameChatReceive = GameChatMessageData;
 
 /** Payload for `GAME_END`: final result and per-player rating changes. */
-export type WsGameEndData = {
-  status: Exclude<BughouseData['status'], null>;
-  /** username → rating delta; empty object for casual games. */
-  ratingChanges: Record<string, number>;
-};
+export type WsGameEndData = GameEndData;
 
 /** Server error payload. */
-export type WsErrorData = {
-  code: string | null;
-  message: string | null;
-};
+export type WsErrorData = ServerErrorData;
 
 // *** MESSAGE TYPES ***
 
@@ -318,7 +300,7 @@ export type WsErrorMsg = { type: (typeof WsMsgType)['ERROR']; data: WsErrorData 
 // *** Union Types ***
 
 /** All message types the client can receive from the server. */
-export type WsIncomingData =
+export type WsIncomingMsg =
   | WsPongMsg
   | WsSyncMsg
   | WsLobbyJoinMsg
@@ -337,7 +319,7 @@ export type WsIncomingData =
   | WsErrorMsg;
 
 /** All message types the client can send to the server. */
-export type WsOutgoingData =
+export type WsOutgoingMsg =
   | WsPingMsg
   | WsReqSyncMsg
   | WsCreateLobbyMsg
@@ -354,4 +336,4 @@ export type WsOutgoingData =
   | WsGameResignMsg;
 
 /** Union of all WebSocket messages (incoming and outgoing). */
-export type WsData = WsIncomingData | WsOutgoingData;
+export type WsMsg = WsIncomingMsg | WsOutgoingMsg;

@@ -26,7 +26,9 @@ const inviterUsername = computed(() => session.pendingInvite ?? '');
 
 watch(
   () => session.pendingInvite,
-  (val) => { if (val !== null) playSound('NewChallenge'); },
+  (val) => {
+    if (val !== null) playSound('NewChallenge');
+  },
 );
 
 const onInviteAccept = () => {
@@ -53,7 +55,7 @@ const createLobby = (option: QuickGameOption) => {
   const time = minutesPart ?? 3;
   const increment = incrementPart ?? 0;
 
-  lobby.setOptimistic(
+  lobby.createLobby(
     { username: auth.user!.username, rating: auth.user!.rating },
     time,
     increment,

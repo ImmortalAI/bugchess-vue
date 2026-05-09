@@ -1,5 +1,5 @@
-import type { WsUserState } from '@/api/websocket/websocket.model';
 import { WsMsgType } from '@/api/websocket/websocket.model';
+import type { UserState } from '@/api/session/session.model';
 import { defineStore } from 'pinia';
 import { computed, ref } from 'vue';
 import { useWebSocketStore } from './ws';
@@ -12,7 +12,7 @@ export const useSessionStore = defineStore('session', () => {
   /** username of the player who sent an invite, null if no pending invite */
   const pendingInvite = ref<string | null>(null);
 
-  const viewKey = ref<string>(crypto.randomUUID());
+  const viewKey = ref(0);
 
   const isIdle = computed(() => state.value === 'Idle');
   const isInLobby = computed(() => state.value === 'Lobby');
@@ -33,7 +33,7 @@ export const useSessionStore = defineStore('session', () => {
     initialized.value = true;
   };
 
-  const setState = (wsState: WsUserState) => {
+  const setState = (wsState: UserState) => {
     if (wsState === 'IDLE') state.value = 'Idle';
     else if (wsState === 'LOBBY') state.value = 'Lobby';
     else state.value = 'Game';
@@ -49,7 +49,7 @@ export const useSessionStore = defineStore('session', () => {
     setLobby();
   };
 
-  const updateView = () => (viewKey.value = crypto.randomUUID());
+  const updateView = () => viewKey.value++;
 
   return {
     state,

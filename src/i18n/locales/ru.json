@@ -98,13 +98,20 @@
   },
   "settings": {
     "pageTitle": "Настройки",
+    "tabProfile": "Профиль",
+    "tabChat": "Чат",
     "profileTitle": "Профиль",
     "passwordTitle": "Смена пароля",
     "currentPassword": "Текущий пароль",
     "newPassword": "Новый пароль",
     "save": "Сохранить",
     "saveSuccess": "Профиль обновлён",
-    "saveError": "Не удалось сохранить изменения"
+    "saveError": "Не удалось сохранить изменения",
+    "quickMessages": "Быстрые сообщения",
+    "quickMessagesEmpty": "Нет быстрых сообщений",
+    "quickMessagesAdd": "Добавить сообщение",
+    "quickMessagesPlaceholder": "Текст сообщения...",
+    "quickMessagesReset": "Сбросить по умолчанию"
   },
   "ws": {
     "connectionLost": "Соединение потеряно. Попытка переподключения...",

@@ -96,7 +96,7 @@ export const useLobbyStore = defineStore('lobby', () => {
    *
    * Called by `HomePage.vue` right after sending `LOBBY_CREATE`.
    */
-  const setOptimistic = (ownerSlot: LobbyPlayerSlot, timeVal: number, incrementVal: number) => {
+  const createLobby = (ownerSlot: LobbyPlayerSlot, timeVal: number, incrementVal: number) => {
     time.value = timeVal;
     increment.value = incrementVal;
     rated.value = false;
@@ -165,7 +165,7 @@ export const useLobbyStore = defineStore('lobby', () => {
     setState,
     updateSlot,
     clearSlot,
-    setOptimistic,
+    createLobby,
     updateSettings,
     setMatchmaking,
     clear,
