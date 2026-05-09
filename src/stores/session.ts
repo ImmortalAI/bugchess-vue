@@ -12,7 +12,7 @@ export const useSessionStore = defineStore('session', () => {
   /** username of the player who sent an invite, null if no pending invite */
   const pendingInvite = ref<string | null>(null);
 
-  const viewKey = ref<string>(crypto.randomUUID());
+  const viewKey = ref(0);
 
   const isIdle = computed(() => state.value === 'Idle');
   const isInLobby = computed(() => state.value === 'Lobby');
@@ -49,7 +49,7 @@ export const useSessionStore = defineStore('session', () => {
     setLobby();
   };
 
-  const updateView = () => (viewKey.value = crypto.randomUUID());
+  const updateView = () => viewKey.value++;
 
   return {
     state,
