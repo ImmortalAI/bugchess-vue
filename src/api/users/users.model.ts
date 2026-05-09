@@ -7,3 +7,11 @@ export type UserData = {
 };
 
 export type UserSearchResults = string[];
+
+export type UserPatch = {
+  email?: string;
+  username?: string;
+  old_password?: string;
+  password?: string;
+  repeat_password?: string;
+};

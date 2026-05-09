@@ -5,6 +5,11 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useTranslation } from '@/composables/useTranslation';
 import { useAuthStore } from '@/stores/auth';
+import { usersPatch } from '@/api/users/users.service';
+import type { UserPatch } from '@/api/users/users.model';
+import type { ApiErrorResponse } from '@/api/base/base.model';
+import { isAxiosError } from 'axios';
+import { toast } from 'vue-sonner';
 import { computed, ref } from 'vue';
 
 const { t } = useTranslation();
@@ -15,6 +20,7 @@ const username = ref(auth.user?.username ?? '');
 const currentPassword = ref('');
 const newPassword = ref('');
 const repeatPassword = ref('');
+const isSaving = ref(false);
 
 const isProfileDirty = computed(
   () => email.value !== auth.user?.email || username.value !== auth.user?.username,
@@ -24,8 +30,36 @@ const isPasswordReady = computed(
 );
 const canSave = computed(() => isProfileDirty.value || isPasswordReady.value);
 
-const handleSave = () => {
-  // TODO: implement when backend is ready
+const handleSave = async () => {
+  if (!auth.user) return;
+
+  const patch: UserPatch = {};
+  if (isProfileDirty.value) {
+    if (email.value !== auth.user.email) patch.email = email.value;
+    if (username.value !== auth.user.username) patch.username = username.value;
+  }
+  if (isPasswordReady.value) {
+    patch.old_password = currentPassword.value;
+    patch.password = newPassword.value;
+    patch.repeat_password = repeatPassword.value;
+  }
+
+  isSaving.value = true;
+  try {
+    await usersPatch(auth.user.id, patch);
+    await auth.refresh();
+    currentPassword.value = '';
+    newPassword.value = '';
+    repeatPassword.value = '';
+    toast.success(t('settings.saveSuccess'));
+  } catch (e) {
+    const message = isAxiosError(e)
+      ? ((e.response?.data as ApiErrorResponse)?.detail ?? t('settings.saveError'))
+      : t('settings.saveError');
+    toast.error(message);
+  } finally {
+    isSaving.value = false;
+  }
 };
 </script>
 
@@ -108,7 +142,7 @@ const handleSave = () => {
           leave-to-class="opacity-0 -translate-y-2"
         >
           <CardFooter v-if="canSave" class="border-t">
-            <Button type="submit" class="w-full">{{ t('settings.save') }}</Button>
+            <Button type="submit" class="w-full" :disabled="isSaving">{{ t('settings.save') }}</Button>
           </CardFooter>
         </Transition>
       </form>
