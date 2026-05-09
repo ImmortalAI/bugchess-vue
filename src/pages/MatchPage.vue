@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import GameCtrlPanel from '@/components/common/GameCtrlPanel.vue';
 import { usePageGuard } from '@/composables/usePageGuard';
 import { useTranslation } from '@/composables/useTranslation';
+import { useQuickMessages } from '@/composables/useQuickMessages';
 import { useAuthStore } from '@/stores/auth';
 import { useGameStore } from '@/stores/game';
 import { useSessionStore } from '@/stores/session';
@@ -60,13 +61,7 @@ const matchNewMsg = (message: string) => {
   game.sendChatMessage(message, auth.user?.username ?? 'Me');
 };
 
-const quickMessages = [
-  'Отличный ход!',
-  'Отлично сыграли!',
-  'Не ожидал такого хода.',
-  'Твой ход.',
-  'Хорошей игры!',
-];
+const { messages: quickMessages } = useQuickMessages();
 </script>
 
 <template>

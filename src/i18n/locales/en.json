@@ -98,13 +98,20 @@
   },
   "settings": {
     "pageTitle": "Settings",
+    "tabProfile": "Profile",
+    "tabChat": "Chat",
     "profileTitle": "Profile",
     "passwordTitle": "Change password",
     "currentPassword": "Current password",
     "newPassword": "New password",
     "save": "Save",
     "saveSuccess": "Profile updated",
-    "saveError": "Failed to save changes"
+    "saveError": "Failed to save changes",
+    "quickMessages": "Quick messages",
+    "quickMessagesEmpty": "No quick messages",
+    "quickMessagesAdd": "Add message",
+    "quickMessagesPlaceholder": "Message text...",
+    "quickMessagesReset": "Reset to defaults"
   },
   "ws": {
     "connectionLost": "Connection lost. Attempting to reconnect...",
