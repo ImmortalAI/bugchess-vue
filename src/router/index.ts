@@ -8,13 +8,9 @@ const router = createRouter({
 });
 
 router.beforeEach(async (to) => {
-  const p = performance.now();
   const auth = useAuthStore();
-  console.warn(`Init ${performance.now() - p} ms`);
 
   if (!auth.initialized && !auth.isAuthenticated) await auth.refresh();
-
-  console.warn(`Refresh ${performance.now() - p} ms`);
 
   if (!to.meta.requiredAuth && !to.meta.requiredGuest) return;
 
