@@ -21,6 +21,7 @@
     "@lichess-org/chessground": "^10.1.1",
     "@multiavatar/multiavatar": "^1.0.7",
     "@tailwindcss/vite": "^4.3.0",
+    "@unovis/vue": "^1.6.5",
     "@vueuse/core": "^14.3.0",
     "axios": "^1.16.0",
     "chessops": "^0.15.0",
