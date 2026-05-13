@@ -94,7 +94,14 @@
   },
   "stats": {
     "pageTitle": "Statistics",
-    "ratingLabel": "Your rating"
+    "ratingLabel": "Your rating",
+    "ratingChartTitle": "Rating history",
+    "ratingChartDescription": "Final rating by day",
+    "ratingMax": "Maximum",
+    "ratingMin": "Minimum",
+    "ratingStatsLoading": "Loading rating...",
+    "ratingStatsError": "Failed to load rating data",
+    "ratingHistoryEmpty": "No rating data yet"
   },
   "settings": {
     "pageTitle": "Settings",

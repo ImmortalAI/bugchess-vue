@@ -94,7 +94,14 @@
   },
   "stats": {
     "pageTitle": "Статистика",
-    "ratingLabel": "Ваш рейтинг"
+    "ratingLabel": "Ваш рейтинг",
+    "ratingChartTitle": "Динамика рейтинга",
+    "ratingChartDescription": "Финальный рейтинг по дням",
+    "ratingMax": "Максимум",
+    "ratingMin": "Минимум",
+    "ratingStatsLoading": "Загрузка рейтинга...",
+    "ratingStatsError": "Не удалось загрузить данные рейтинга",
+    "ratingHistoryEmpty": "Нет данных по рейтингу"
   },
   "settings": {
     "pageTitle": "Настройки",
