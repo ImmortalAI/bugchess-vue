@@ -141,7 +141,6 @@ export const useWebSocketStore = defineStore('websocket', () => {
       // ERROR
       case WsMsgType.ERROR:
         toast.error(data.data.message ?? t('ws.serverError'));
-        router.push('/');
         sendMessage({ type: WsMsgType.REQ_SYNC, data: {} });
         break;
     }

@@ -138,6 +138,7 @@ export const useGameStore = defineStore('game', () => {
     if (!mainBoardState.value || !mainCgApi.value) return;
 
     const patch: Config = {
+      fen: mainBoardState.value!.fen,
       turnColor: mainBoardState.value!.turnColor,
       movable: {
         dests: mainBoardState.value!.movable!.dests,
@@ -147,6 +148,10 @@ export const useGameStore = defineStore('game', () => {
     };
 
     mainCgApi.value.set(patch);
+  };
+
+  const requestSync = () => {
+    ws.sendMessage({ type: WsMsgType.REQ_SYNC, data: {} });
   };
 
   const updateBoardState = (lastMove: [Key, Key] | [Key]) => {
@@ -267,12 +272,10 @@ export const useGameStore = defineStore('game', () => {
         promotion,
       })
     ) {
-      throw new ChessError(
-        'Invalid promotion move: ' +
-          promotionMoveCache.value.from +
-          ' -> ' +
-          promotionMoveCache.value.to,
-      );
+      promotionMoveCache.value = null;
+      isPromoting.value = false;
+      restoreBoardState();
+      return;
     }
 
     const { from, to } = promotionMoveCache.value;
@@ -314,7 +317,8 @@ export const useGameStore = defineStore('game', () => {
     }
 
     if (!api.value.isLegal({ from, to })) {
-      throw new ChessError('Invalid move: ' + orig + ' -> ' + dest);
+      restoreBoardState();
+      return;
     }
 
     const uci = makeUci({ from, to });
@@ -341,24 +345,24 @@ export const useGameStore = defineStore('game', () => {
   const drop = (role: Role, to: Key) => {
     if (!api.value) return;
 
-    if (role === 'pawn' && isFLLine(to)) {
-      mainCgApi.value?.setPieces(new Map([[to, undefined]]));
-      restoreBoardState();
-      return;
-    }
-
     const toSq = parseSquare(to);
     if (toSq === undefined) {
       throw new ChessError('Invalid drop target: ' + to);
     }
 
+    const dropMove: Move = { role, to: toSq };
+    if (!api.value.isLegal(dropMove)) {
+      restoreBoardState();
+      return;
+    }
+
     const moverColor = api.value.turn;
     ws.sendMessage({
       type: WsMsgType.GAME_MOVE,
-      data: { idx: myBoardIdx.value, move: makeUci({ role, to: toSq }) },
+      data: { idx: myBoardIdx.value, move: makeUci(dropMove) },
     });
 
-    api.value.play({ role, to: toSq });
+    api.value.play(dropMove);
     if (mainPockets.value) mainPockets.value[moverColor][role as Exclude<Role, 'king'>]--;
 
     updateBoardState([to]);
@@ -407,10 +411,12 @@ export const useGameStore = defineStore('game', () => {
 
     const parsed = parseUci(uci);
     if (!parsed) {
-      throw new ChessError('Invalid opponent move UCI: ' + uci);
+      requestSync();
+      return;
     }
-    if (!api.value.isLegal(parsed)) {
-      throw new ChessError('Invalid opponent move: ' + uci);
+    if (api.value.isLegal(parsed)) {
+      requestSync();
+      return;
     }
 
     const moverColor = api.value.turn;
@@ -473,9 +479,14 @@ export const useGameStore = defineStore('game', () => {
       if (!mateApi.value) return;
 
       const parsed = parseUci(data.move);
-      if (!parsed) throw new ChessError('Invalid mate board UCI: ' + data.move);
-      if (!mateApi.value.isLegal(parsed))
-        throw new ChessError('Invalid mate board move: ' + data.move);
+      if (!parsed) {
+        requestSync();
+        return;
+      }
+      if (mateApi.value.isLegal(parsed)) {
+        requestSync();
+        return;
+      }
 
       let lastMove: Key[];
 
