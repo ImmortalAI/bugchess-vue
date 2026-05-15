@@ -32,14 +32,21 @@ const avatarSrc = computed(() => {
 <template>
   <div :class="cn('flex flex-col gap-1', props.class)">
     <!-- Clock above -->
-    <ChessClock v-if="showClock && clockPosition === 'top'" :remaining-ms="props.remainingMs"
-      :active="props.clockActive" />
+    <ChessClock
+      v-if="showClock && clockPosition === 'top'"
+      :remaining-ms="props.remainingMs"
+      :active="props.clockActive"
+    />
 
     <!-- Avatar + name row (+ inline clock) -->
     <div class="flex items-center gap-2">
       <!-- clock-left layout: [clock] [name] [avatar] -->
       <template v-if="clockPosition === 'inline-start'">
-        <ChessClock v-if="showClock" :remaining-ms="props.remainingMs" :active="props.clockActive" />
+        <ChessClock
+          v-if="showClock"
+          :remaining-ms="props.remainingMs"
+          :active="props.clockActive"
+        />
         <span class="text-sm font-medium truncate flex-1 min-w-0 text-right">{{
           props.username
         }}</span>
@@ -55,13 +62,19 @@ const avatarSrc = computed(() => {
           <AvatarFallback>{{ props.username[0]?.toUpperCase() }}</AvatarFallback>
         </Avatar>
         <span class="text-sm font-medium truncate flex-1 min-w-0">{{ props.username }}</span>
-        <ChessClock v-if="showClock && clockPosition === 'inline'" :remaining-ms="props.remainingMs"
-          :active="props.clockActive" />
+        <ChessClock
+          v-if="showClock && clockPosition === 'inline'"
+          :remaining-ms="props.remainingMs"
+          :active="props.clockActive"
+        />
       </template>
     </div>
 
     <!-- Clock below -->
-    <ChessClock v-if="showClock && clockPosition === 'bottom'" :remaining-ms="props.remainingMs"
-      :active="props.clockActive" />
+    <ChessClock
+      v-if="showClock && clockPosition === 'bottom'"
+      :remaining-ms="props.remainingMs"
+      :active="props.clockActive"
+    />
   </div>
 </template>

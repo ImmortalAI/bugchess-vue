@@ -147,7 +147,8 @@ onMounted(async () => {
         </CardHeader>
         <CardContent>
           <span
-            class="text-7xl font-black tracking-tight bg-linear-to-br from-primary to-primary/50 bg-clip-text text-transparent">
+            class="text-7xl font-black tracking-tight bg-linear-to-br from-primary to-primary/50 bg-clip-text text-transparent"
+          >
             {{ rating }}
           </span>
           <span class="ml-12">sigma {{ sigma }}</span>
@@ -163,7 +164,8 @@ onMounted(async () => {
 
           <div class="flex">
             <div
-              class="flex flex-1 flex-col justify-center gap-1 border-t px-6 py-4 text-left sm:border-t-0 sm:border-l sm:px-8 sm:py-6">
+              class="flex flex-1 flex-col justify-center gap-1 border-t px-6 py-4 text-left sm:border-t-0 sm:border-l sm:px-8 sm:py-6"
+            >
               <span class="text-muted-foreground text-xs">
                 {{ t('stats.ratingMax') }}
               </span>
@@ -172,7 +174,8 @@ onMounted(async () => {
               </span>
             </div>
             <div
-              class="flex flex-1 flex-col justify-center gap-1 border-t border-l px-6 py-4 text-left sm:border-t-0 sm:px-8 sm:py-6">
+              class="flex flex-1 flex-col justify-center gap-1 border-t border-l px-6 py-4 text-left sm:border-t-0 sm:px-8 sm:py-6"
+            >
               <span class="text-muted-foreground text-xs">
                 {{ t('stats.ratingMin') }}
               </span>
@@ -183,28 +186,49 @@ onMounted(async () => {
           </div>
         </CardHeader>
         <CardContent class="px-2 sm:p-6">
-          <div v-if="isStatsLoading" class="text-muted-foreground flex h-62 items-center justify-center text-sm">
+          <div
+            v-if="isStatsLoading"
+            class="text-muted-foreground flex h-62 items-center justify-center text-sm"
+          >
             {{ t('stats.ratingStatsLoading') }}
           </div>
-          <div v-else-if="isStatsError" class="text-muted-foreground flex h-62 items-center justify-center text-sm">
+          <div
+            v-else-if="isStatsError"
+            class="text-muted-foreground flex h-62 items-center justify-center text-sm"
+          >
             {{ t('stats.ratingStatsError') }}
           </div>
-          <div v-else-if="ratingChartData.length === 0"
-            class="text-muted-foreground flex h-62 items-center justify-center text-sm">
+          <div
+            v-else-if="ratingChartData.length === 0"
+            class="text-muted-foreground flex h-62 items-center justify-center text-sm"
+          >
             {{ t('stats.ratingHistoryEmpty') }}
           </div>
           <ChartContainer v-else :config="chartConfig" class="aspect-auto h-62 w-full" cursor>
             <VisXYContainer :data="ratingChartData" :y-domain="ratingDomain">
-              <VisLine :x="(item: RatingChartPoint) => item.date" :y="(item: RatingChartPoint) => item.rating"
-                :color="chartConfig.rating.color" />
-              <VisAxis type="x" :x="(item: RatingChartPoint) => item.date" :tick-line="false" :domain-line="false"
-                :grid-line="false" :tick-format="formatShortDate" />
+              <VisLine
+                :x="(item: RatingChartPoint) => item.date"
+                :y="(item: RatingChartPoint) => item.rating"
+                :color="chartConfig.rating.color"
+              />
+              <VisAxis
+                type="x"
+                :x="(item: RatingChartPoint) => item.date"
+                :tick-line="false"
+                :domain-line="false"
+                :grid-line="false"
+                :tick-format="formatShortDate"
+              />
               <VisAxis type="y" :num-ticks="3" :tick-line="false" :domain-line="false" />
               <ChartTooltip />
-              <ChartCrosshair :template="componentToString(chartConfig, ChartTooltipContent, {
-                labelFormatter: formatFullDate,
-              })
-                " :color="chartConfig.rating.color" />
+              <ChartCrosshair
+                :template="
+                  componentToString(chartConfig, ChartTooltipContent, {
+                    labelFormatter: formatFullDate,
+                  })
+                "
+                :color="chartConfig.rating.color"
+              />
             </VisXYContainer>
           </ChartContainer>
         </CardContent>
