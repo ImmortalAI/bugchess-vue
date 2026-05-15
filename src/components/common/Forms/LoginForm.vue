@@ -15,12 +15,10 @@ import { ref } from 'vue';
 import { useAuthStore } from '@/stores/auth';
 import { toast } from 'vue-sonner';
 import { useTranslation } from '@/composables/useTranslation';
-import { useWebSocketStore } from '@/stores/ws';
 
 const router = useRouter();
 const auth = useAuthStore();
 const { t } = useTranslation();
-const ws = useWebSocketStore();
 
 const email = ref('');
 const password = ref('');
@@ -36,10 +34,7 @@ const handleSubmit = async () => {
 
   const res = await auth.login({ email: email.value, password: password.value });
   if (res.isOk) {
-    const result = await auth.refresh();
-    if (result.isOk) {
-      ws.connect();
-    }
+    await auth.refresh();
     router.push('/');
   } else {
     toast.error(res.message || t('authPage.errorLoginFailed'));

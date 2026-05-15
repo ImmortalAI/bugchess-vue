@@ -47,8 +47,8 @@ const handleSubmit = async () => {
     repeat_password: repeatPassword.value,
   });
   if (res.isOk) {
-    router.push('/signin');
     toast.success(t('authPage.successRegister'));
+    router.push('/');
   } else {
     toast.error(res.message || t('authPage.errorRegisterFailed'));
   }

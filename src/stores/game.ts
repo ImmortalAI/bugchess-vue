@@ -414,7 +414,7 @@ export const useGameStore = defineStore('game', () => {
       requestSync();
       return;
     }
-    if (api.value.isLegal(parsed)) {
+    if (!api.value.isLegal(parsed)) {
       requestSync();
       return;
     }
@@ -483,7 +483,7 @@ export const useGameStore = defineStore('game', () => {
         requestSync();
         return;
       }
-      if (mateApi.value.isLegal(parsed)) {
+      if (!mateApi.value.isLegal(parsed)) {
         requestSync();
         return;
       }

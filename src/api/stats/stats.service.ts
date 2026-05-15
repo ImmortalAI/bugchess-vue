@@ -1,7 +1,7 @@
 import apiClient from '@/utils/apiClient';
 import type { PlatformStats, RatingDateRange, RatingDayFinal, RatingExtremes } from './stats.model';
 
-const USE_MOCK_STATS = true;
+const USE_MOCK_STATS = false;
 const DAY_MS = 24 * 60 * 60 * 1000;
 const MOCK_RATING_ALL_TIME_DAYS = 180;
 

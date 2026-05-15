@@ -45,7 +45,7 @@ export const useAuthStore = defineStore('auth', () => {
   const register = async (formData: AuthRegisterData): Promise<ActionResult> => {
     try {
       const message = await authRegister(formData);
-      await refresh();
+      await login({ email: formData.email, password: formData.password });
       return { isOk: true, message };
     } catch (e) {
       if (isAxiosError(e))
