@@ -1,38 +1,29 @@
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted } from 'vue';
+import { onBeforeUnmount } from 'vue';
 
-const MIN_VH = 40;
-const MAX_VH = 80;
-const DEFAULT_VH = 75;
+const emit = defineEmits<{ resize: [deltaPx: number] }>();
 
 let isDragging = false;
 let prevY = 0;
-let currentVh = DEFAULT_VH;
+let pendingDelta = 0;
 let rafId: number | null = null;
-
-const clamp = (val: number) => Math.min(MAX_VH, Math.max(MIN_VH, val));
-
-const setBodyVars = (vh: number) => {
-  const rounded = Math.round(vh * 2) / 2; // шаг 0.5vh
-  document.body.style.setProperty('--cg-width', `${rounded}vh`);
-  document.body.style.setProperty('--cg-height', `${rounded}vh`);
-};
 
 const onMouseMove = (e: MouseEvent) => {
   if (!isDragging) return;
-  const deltaVh = ((e.clientY - prevY) / window.innerHeight) * 100;
+  pendingDelta += e.clientY - prevY;
   prevY = e.clientY;
-  currentVh = clamp(currentVh + deltaVh);
 
   if (rafId !== null) return;
   rafId = requestAnimationFrame(() => {
-    setBodyVars(currentVh);
+    emit('resize', pendingDelta);
+    pendingDelta = 0;
     rafId = null;
   });
 };
 
 const stopDrag = () => {
   isDragging = false;
+  pendingDelta = 0;
   if (rafId !== null) {
     cancelAnimationFrame(rafId);
     rafId = null;
@@ -49,7 +40,6 @@ const startDrag = (e: MouseEvent) => {
   window.addEventListener('mouseup', stopDrag);
 };
 
-onMounted(() => setBodyVars(DEFAULT_VH));
 onBeforeUnmount(stopDrag);
 </script>
 

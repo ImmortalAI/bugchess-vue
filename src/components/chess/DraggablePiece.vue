@@ -7,6 +7,8 @@ interface Props {
   piece: keyof PocketData;
   color: Color;
   count: number;
+  /** Edge length of the piece slot in px. */
+  size: number;
   interactive?: boolean;
   class?: string;
 }
@@ -18,6 +20,7 @@ const emit = defineEmits<{
 }>();
 
 const isActive = computed(() => props.interactive && props.count > 0);
+const badgeFontSize = computed(() => Math.max(9, Math.round(props.size * 0.28)));
 
 const onInteraction = (e: MouseEvent | TouchEvent) => {
   e.preventDefault();
@@ -28,11 +31,12 @@ const onInteraction = (e: MouseEvent | TouchEvent) => {
 <template>
   <div
     :class="[
-      'relative @container',
-      props.class ?? 'h-1/5 aspect-square',
+      'relative',
+      props.class,
       isActive && 'cursor-grab hover:ring-1 hover:ring-white/40 rounded-sm',
       count === 0 && 'opacity-30',
     ]"
+    :style="{ width: `${size}px`, height: `${size}px` }"
   >
     <span
       :class="[piece, color, 'block w-full h-full bg-cover bg-no-repeat']"
@@ -41,7 +45,8 @@ const onInteraction = (e: MouseEvent | TouchEvent) => {
     />
     <span
       v-if="count > 1"
-      class="absolute bottom-0 right-0 w-[35%] h-[35%] rounded-full bg-primary text-primary-foreground font-bold leading-none flex items-center justify-center pointer-events-none text-[9px] @[50px]:text-[12px] @[70px]:text-[15px]"
+      class="absolute bottom-0 right-0 w-[35%] h-[35%] rounded-full bg-primary text-primary-foreground font-bold leading-none flex items-center justify-center pointer-events-none"
+      :style="{ fontSize: `${badgeFontSize}px` }"
       >{{ count }}</span
     >
   </div>

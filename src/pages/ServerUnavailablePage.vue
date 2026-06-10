@@ -2,7 +2,7 @@
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useTranslation } from '@/composables/useTranslation';
-import { ServerCrash } from 'lucide-vue-next';
+import { ServerCrash } from '@lucide/vue';
 
 const { t } = useTranslation();
 

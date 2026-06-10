@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { MessageCircle } from 'lucide-vue-next';
+import { MessageCircle } from '@lucide/vue';
 
 const props = defineProps<{
   title: string;

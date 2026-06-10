@@ -71,6 +71,8 @@
   },
   "match": {
     "switchBoard": "Switch board",
+    "switchToPartnerBoard": "Switch to partner's board",
+    "switchToMainBoard": "Back to main board",
     "gameResult": {
       "win": "Victory",
       "loss": "Defeat",

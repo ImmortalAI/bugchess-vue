@@ -71,6 +71,8 @@
   },
   "match": {
     "switchBoard": "Сменить доску",
+    "switchToPartnerBoard": "Переключиться на доску партнера",
+    "switchToMainBoard": "Вернуться к основной доске",
     "gameResult": {
       "win": "Победа",
       "loss": "Поражение",

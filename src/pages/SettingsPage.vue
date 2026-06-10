@@ -13,7 +13,7 @@ import type { ApiErrorResponse } from '@/api/base/base.model';
 import { isAxiosError } from 'axios';
 import { toast } from 'vue-sonner';
 import { computed, ref } from 'vue';
-import { Trash2, Plus, RotateCcw } from 'lucide-vue-next';
+import { Trash2, Plus, RotateCcw } from '@lucide/vue';
 
 const { t } = useTranslation();
 const auth = useAuthStore();
@@ -102,21 +102,11 @@ const handleAddMessage = () => {
                 <div class="flex flex-col gap-4">
                   <div class="flex flex-col gap-2">
                     <Label for="settings-username">{{ t('authPage.formUsername') }}</Label>
-                    <Input
-                      id="settings-username"
-                      type="text"
-                      autocomplete="username"
-                      v-model.trim="username"
-                    />
+                    <Input id="settings-username" type="text" autocomplete="username" v-model.trim="username" />
                   </div>
                   <div class="flex flex-col gap-2">
                     <Label for="settings-email">{{ t('authPage.formEmail') }}</Label>
-                    <Input
-                      id="settings-email"
-                      type="email"
-                      autocomplete="email"
-                      v-model.trim="email"
-                    />
+                    <Input id="settings-email" type="email" autocomplete="email" v-model.trim="email" />
                   </div>
                 </div>
               </section>
@@ -131,46 +121,30 @@ const handleAddMessage = () => {
                   <div class="flex flex-col gap-2">
                     <Label for="settings-current-password">{{
                       t('settings.currentPassword')
-                    }}</Label>
-                    <Input
-                      id="settings-current-password"
-                      type="password"
-                      autocomplete="current-password"
-                      v-model="currentPassword"
-                    />
+                      }}</Label>
+                    <Input id="settings-current-password" type="password" autocomplete="current-password"
+                      v-model="currentPassword" />
                   </div>
                   <div class="flex flex-col gap-2">
                     <Label for="settings-new-password">{{ t('settings.newPassword') }}</Label>
-                    <Input
-                      id="settings-new-password"
-                      type="password"
-                      autocomplete="new-password"
-                      v-model="newPassword"
-                    />
+                    <Input id="settings-new-password" type="password" autocomplete="new-password"
+                      v-model="newPassword" />
                   </div>
                   <div class="flex flex-col gap-2">
                     <Label for="settings-repeat-password">{{
                       t('authPage.formPasswordRepeat')
-                    }}</Label>
-                    <Input
-                      id="settings-repeat-password"
-                      type="password"
-                      autocomplete="new-password"
-                      v-model="repeatPassword"
-                    />
+                      }}</Label>
+                    <Input id="settings-repeat-password" type="password" autocomplete="new-password"
+                      v-model="repeatPassword" />
                   </div>
                 </div>
               </section>
             </CardContent>
 
-            <Transition
-              enter-active-class="transition-all duration-200 ease-out"
-              enter-from-class="opacity-0 -translate-y-2"
-              enter-to-class="opacity-100 translate-y-0"
-              leave-active-class="transition-all duration-150 ease-in"
-              leave-from-class="opacity-100 translate-y-0"
-              leave-to-class="opacity-0 -translate-y-2"
-            >
+            <Transition enter-active-class="transition-all duration-200 ease-out"
+              enter-from-class="opacity-0 -translate-y-2" enter-to-class="opacity-100 translate-y-0"
+              leave-active-class="transition-all duration-150 ease-in" leave-from-class="opacity-100 translate-y-0"
+              leave-to-class="opacity-0 -translate-y-2">
               <CardFooter v-if="canSave" class="border-t">
                 <Button type="submit" class="w-full" :disabled="isSaving">
                   {{ t('settings.save') }}
@@ -188,12 +162,7 @@ const handleAddMessage = () => {
                 <h2 class="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
                   {{ t('settings.quickMessages') }}
                 </h2>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  class="gap-1.5 text-muted-foreground"
-                  @click="reset"
-                >
+                <Button variant="ghost" size="sm" class="gap-1.5 text-muted-foreground" @click="reset">
                   <RotateCcw class="size-3.5" />
                   {{ t('settings.quickMessagesReset') }}
                 </Button>
@@ -205,23 +174,15 @@ const handleAddMessage = () => {
                 </p>
                 <div v-for="(_, index) in messages" :key="index" class="flex items-center gap-2">
                   <Input v-model="messages[index]" class="flex-1" />
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    class="shrink-0 text-muted-foreground hover:text-destructive"
-                    @click="remove(index)"
-                  >
+                  <Button variant="ghost" size="icon" class="shrink-0 text-muted-foreground hover:text-destructive"
+                    @click="remove(index)">
                     <Trash2 class="size-4" />
                   </Button>
                 </div>
               </div>
 
               <form class="flex flex-col gap-2 sm:flex-row" @submit.prevent="handleAddMessage">
-                <Input
-                  v-model.trim="newMessage"
-                  :placeholder="t('settings.quickMessagesPlaceholder')"
-                  class="flex-1"
-                />
+                <Input v-model.trim="newMessage" :placeholder="t('settings.quickMessagesPlaceholder')" class="flex-1" />
                 <Button type="submit" variant="outline" class="gap-1.5" :disabled="!newMessage">
                   <Plus class="size-4" />
                   {{ t('settings.quickMessagesAdd') }}
