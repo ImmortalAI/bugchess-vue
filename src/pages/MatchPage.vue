@@ -144,7 +144,7 @@ const { messages: quickMessages } = useQuickMessages();
     <!-- Switch board (full width) -->
     <Button variant="outline" class="mx-2 gap-2" @click="onSwitchBoard">
       <ArrowLeftRight class="size-4" />
-      {{ t('match.switchBoard') }}
+      {{ boardReversed ? t('match.switchToMainBoard') : t('match.switchToPartnerBoard') }}
     </Button>
 
     <!-- Mobile game controls: chat + resign + result -->
