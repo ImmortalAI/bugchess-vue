@@ -134,6 +134,15 @@ export const useGameStore = defineStore('game', () => {
     mateCgApi.value = null;
   };
 
+  // Start a Chessground drag of a pocket piece onto the main board.
+  const dragMainPocketPiece = (
+    piece: keyof PocketData,
+    color: Color,
+    event: MouseEvent | TouchEvent,
+  ) => {
+    mainCgApi.value?.dragNewPiece({ role: piece, color }, event);
+  };
+
   const restoreBoardState = () => {
     if (!mainBoardState.value || !mainCgApi.value) return;
 
@@ -794,6 +803,7 @@ export const useGameStore = defineStore('game', () => {
     sendChatMessage,
     registerMainBoard,
     registerMateBoard,
+    dragMainPocketPiece,
     unregisterMainBoard,
     unregisterMateBoard,
   };
